@@ -18,6 +18,48 @@ Combining these two, we get a really easy to use framework for creating slide de
 The [Marp extension](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) is available on the VS Code marketplace. 
 
 There is also a [CLI version](https://github.com/marp-team/marp-cli) in case anyone feels troubled to move away from their beloved terminal, a makefile to use it is already provided.
+Just use `make` (or `make pdf` or `make html`) to generate the pdf and html presentation.
+
+## Two column layout
+
+Two column with an image can be easily done by setting a background image either left or right:
+```markdown
+![bg left](myImage.jpg)
+
+# title
+
+and text
+```
+
+If you want to use a code snippet on the left you can easily do it if you
+enable markdown.marp.enableHtml in the VS code extension, or pass --html to the marp cli (even to generate pdfs).
+
+then you do something like
+
+````markdown
+# A Slide with two columns
+
+<div class="twocolumns">
+<div>
+
+## Code
+
+```c++
+void f(int x) {
+}
+```
+
+</div>
+<div>
+
+## Explanations
+
+declaration of a function f...
+
+</div>
+</div>
+
+````
 
 ## Getting Started
 

@@ -6,7 +6,7 @@ paginate: true
 backgroundColor: #fff
 backgroundImage: url('https://marp.app/assets/hero-background.svg')
 footer: '![width:780px](common/footer.png)'
-size: 4:3
+size: 16:9
 ---
 
 # **Marp**
@@ -35,6 +35,30 @@ foobar
 
 foobar
 ```
+
+---
+
+# A Slide with two columns
+
+<div class="twocolumns">
+<div>
+
+## Code
+
+```c++
+void f(int x) {
+}
+```
+
+</div>
+<div>
+
+## Explanations
+
+declaration of a function f...
+
+</div>
+</div>
 
 ---
 

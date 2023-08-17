@@ -7,10 +7,10 @@ HTMLS := $(SRCS:%.md=%.html)
 MARP = marp
 
 %.pdf: %.md
-	${MARP} --allow-local-files --theme ../slides-support/themes/cscs.css --pdf $< -o $@
+	${MARP} --allow-local-files --html --theme ../slides-support/themes/cscs.css --pdf $< -o $@
 
 %.html: %.md
-	${MARP} --allow-local-files --theme ../slides-support/themes/cscs.css $< -o $@
+	${MARP} --allow-local-files --html --theme ../slides-support/themes/cscs.css $< -o $@
 
 pdf: ${PDFS}
 
