@@ -4,7 +4,7 @@ theme: cscs
 # class: lead
 paginate: true
 backgroundColor: #fff
-backgroundImage: url('../slides-support/common/4k-slide-bg.png')
+backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
 size: 16:9
 ---
 
