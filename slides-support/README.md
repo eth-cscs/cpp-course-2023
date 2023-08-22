@@ -69,7 +69,7 @@ After installing the extension on VS code, clone the repo and open `test.md`.
 Click the highlighted button to see preview. However the preview on the right side will not look right.
 
 ![Settings](docs/settings.png)
-Click the button next to it to open Settings. In the **Themes** section, add `common/cscs.css` so that it finds the custom theme in its path. Here some custom definitions have been made.
+Click the button next to it to open Settings. In the **Themes** section, add `slides-support/themes/cscs.css` so that it finds the custom theme in its path. Here some custom definitions have been made.
 
 ![Environment](docs/environment.png)
 Having done these steps, the environment should look like the image above. The preview should be updated live. There are samples to insert code blocks, images and math.

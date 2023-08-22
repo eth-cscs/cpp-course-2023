@@ -4,8 +4,7 @@ theme: cscs
 # class: lead
 paginate: true
 backgroundColor: #fff
-backgroundImage: url('https://marp.app/assets/hero-background.svg')
-footer: '![width:780px](common/footer.png)'
+backgroundImage: url(../slides-support/common/4k-slide-bg-white.png)
 size: 16:9
 ---
 
