@@ -1,0 +1,1 @@
+add_marp_slides(02_05_examples_sid examples_sid.md)

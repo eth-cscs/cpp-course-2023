@@ -1,0 +1,1 @@
+add_marp_slides(01_02_infrastructure_resources infrastructure_resources.md)

@@ -1,0 +1,1 @@
+add_marp_slides(03_01_data_oriented_design data_oriented_design.md)

@@ -1,0 +1,1 @@
+add_marp_slides(02_04_exercises exercises.md)

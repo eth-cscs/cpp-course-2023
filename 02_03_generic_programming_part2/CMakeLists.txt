@@ -1,0 +1,1 @@
+add_marp_slides(02_03_generic_programming_part2 generic_programming_part2.md)
