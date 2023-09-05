@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <new>
 #include <numeric>
 #include <span>
 #include <thread>
 #include <vector>
-
 
 
 auto get_my_values(std::span<const int64_t> values, size_t my_idx, size_t nthreads) {
@@ -16,14 +16,13 @@ auto get_my_values(std::span<const int64_t> values, size_t my_idx, size_t nthrea
     return my_values;
 }
 
+const size_t nthreads = std::min(size_t(std::thread::hardware_concurrency()), size_t(64) / sizeof(int64_t));
 
 int64_t with_false_sharing(std::span<const int64_t> values) {
-    constexpr size_t nthreads = 16;
-    std::array<int64_t, nthreads> partial_sums;
-    std::ranges::fill(partial_sums, 0);
-    std::array<std::thread, nthreads> threads;
+    std::vector<int64_t> partial_sums(nthreads, 0);
+    std::vector<std::thread> threads(nthreads);
     size_t result_idx = 0;
-    std::ranges::generate(threads, [&partial_sums, nthreads, values, &result_idx] {
+    std::ranges::generate(threads, [&partial_sums, values, &result_idx] {
         return std::thread([=, &partial_sums, my_idx = result_idx++] {
             const auto my_values = get_my_values(values, my_idx, nthreads);
             // NOTE: Writing 'partial_sum' once for each item.
@@ -36,12 +35,10 @@ int64_t with_false_sharing(std::span<const int64_t> values) {
 
 
 int64_t without_false_sharing(std::span<const int64_t> values) {
-    constexpr size_t nthreads = 16;
-    std::array<int64_t, nthreads> partial_sums;
-    std::ranges::fill(partial_sums, 0.0f);
-    std::array<std::thread, nthreads> threads;
+    std::vector<int64_t> partial_sums(nthreads, 0);
+    std::vector<std::thread> threads(nthreads);
     size_t result_idx = 0;
-    std::ranges::generate(threads, [&partial_sums, nthreads, values, &result_idx] {
+    std::ranges::generate(threads, [&partial_sums, values, &result_idx] {
         return std::thread([=, &partial_sums, my_idx = result_idx++] {
             const auto my_values = get_my_values(values, my_idx, nthreads);
             int64_t my_partial_sum = 0;
@@ -57,21 +54,21 @@ int64_t without_false_sharing(std::span<const int64_t> values) {
 
 int main() {
     using std::chrono::high_resolution_clock;
-    using std::chrono::nanoseconds;
+    using std::chrono::milliseconds;
 
-    std::vector<int64_t> values(100'000'000, 1);
+    std::vector<int64_t> values(1'000'000'000, 1);
 
     {
         const auto start = high_resolution_clock::now();
         std::cout << without_false_sharing(values) << std::endl;
         const auto end = high_resolution_clock::now();
-        std::cout << "without false sharing: " << duration_cast<nanoseconds>(end - start) << std::endl;
+        std::cout << "without false sharing: " << duration_cast<milliseconds>(end - start).count() << " ms" << std::endl;
     }
 
     {
         const auto start = high_resolution_clock::now();
         std::cout << with_false_sharing(values) << std::endl;
         const auto end = high_resolution_clock::now();
-        std::cout << "with false sharing: " << duration_cast<nanoseconds>(end - start) << std::endl;
+        std::cout << "with false sharing: " << duration_cast<milliseconds>(end - start).count() << " ms" << std::endl;
     }
 }
