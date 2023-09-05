@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.25)
 
 project(cpp_course_2023)
 
-include(cmake/Marp.cmake)
+option(CPP_COURSE_BUILD_SLIDES "Weather to build slides." ON)
+
+if (${CPP_COURSE_BUILD_SLIDES})
+    include(cmake/Marp.cmake)
+endif()
+
 
 add_subdirectory(01_01_introduction)
 add_subdirectory(01_02_infrastructure_resources)

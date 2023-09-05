@@ -1,0 +1,56 @@
+name: Slides
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  slides:
+    name: slides
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - uses: seanmiddleditch/gha-setup-ninja@v3
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt install chromium-browser
+        wget https://github.com/marp-team/marp-cli/releases/download/v3.2.1/marp-cli-v3.2.1-linux.tar.gz
+        tar -xf ./marp-cli-v3.2.1-linux.tar.gz
+        sudo ln -s $(pwd)/marp /usr/bin/marp
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: |
+        cmake -S $GITHUB_WORKSPACE -B . -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config Debug
+
+    - name: Copy slides
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: |
+        mkdir slides
+        cp ./*.pdf ./slides/
+
+    - name: Archive slides
+      uses: actions/upload-artifact@v3
+      with:
+        name: slides
+        path: ${{runner.workspace}}/build/slides
