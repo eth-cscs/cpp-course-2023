@@ -2,3 +2,5 @@
 *.html
 *.pdf
 build/
+.cache/
+.vscode/
