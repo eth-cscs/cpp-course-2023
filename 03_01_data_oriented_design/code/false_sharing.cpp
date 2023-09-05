@@ -65,13 +65,13 @@ int main() {
         const auto start = high_resolution_clock::now();
         std::cout << without_false_sharing(values) << std::endl;
         const auto end = high_resolution_clock::now();
-        std::cout << "without false sharing: " << nanoseconds(end - start) << std::endl;
+        std::cout << "without false sharing: " << duration_cast<nanoseconds>(end - start) << std::endl;
     }
 
     {
         const auto start = high_resolution_clock::now();
         std::cout << with_false_sharing(values) << std::endl;
         const auto end = high_resolution_clock::now();
-        std::cout << "with false sharing: " << nanoseconds(end - start) << std::endl;
+        std::cout << "with false sharing: " << duration_cast<nanoseconds>(end - start) << std::endl;
     }
 }
