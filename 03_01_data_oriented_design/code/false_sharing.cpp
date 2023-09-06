@@ -7,48 +7,67 @@
 #include <thread>
 #include <vector>
 
+#ifdef _MSC_VER
+#define NOINLINE __declspec(noinline)
+#else
+#define NOINLINE __attribute__((noinline))
+#endif
 
-auto get_my_values(std::span<const int64_t> values, size_t my_idx, size_t nthreads) {
-    const auto my_base = (values.size() + nthreads - 1) / nthreads;
-    const auto my_start = my_base * my_idx;
-    const auto my_end = std::min(values.size(), my_base * (my_idx + 1));
-    const auto my_values = values.subspan(my_start, my_end - my_start);
-    return my_values;
-}
 
-const size_t nthreads = std::min(size_t(std::thread::hardware_concurrency()), size_t(64) / sizeof(int64_t));
+std::vector<std::span<const int64_t>> partition_values(std::span<const int64_t> values, size_t nthreads) {
+    std::vector<std::span<const int64_t>> partitions;
 
-int64_t with_false_sharing(std::span<const int64_t> values) {
-    std::vector<int64_t> partial_sums(nthreads, 0);
-    std::vector<std::thread> threads(nthreads);
-    size_t result_idx = 0;
-    std::ranges::generate(threads, [&partial_sums, values, &result_idx] {
-        return std::thread([=, &partial_sums, my_idx = result_idx++] {
-            const auto my_values = get_my_values(values, my_idx, nthreads);
-            // NOTE: Writing 'partial_sum' once for each item.
-            std::ranges::for_each(my_values, [&](auto item) { partial_sums[my_idx] += item; });
-        });
-    });
-    std::ranges::for_each(threads, [](auto& th) { th.join(); });
-    return std::reduce(partial_sums.begin(), partial_sums.end(), 0);
+    const auto partition_size = (values.size() + nthreads - 1) / nthreads;
+    for (size_t thread_idx = 0; thread_idx < nthreads; ++thread_idx) {
+        const auto first = partition_size * thread_idx;
+        const auto last = std::min(values.size(), partition_size * (thread_idx + 1));
+        partitions.push_back(values.subspan(first, last - first));
+    }
+
+    return partitions;
 }
 
 
-int64_t without_false_sharing(std::span<const int64_t> values) {
-    std::vector<int64_t> partial_sums(nthreads, 0);
-    std::vector<std::thread> threads(nthreads);
-    size_t result_idx = 0;
-    std::ranges::generate(threads, [&partial_sums, values, &result_idx] {
-        return std::thread([=, &partial_sums, my_idx = result_idx++] {
-            const auto my_values = get_my_values(values, my_idx, nthreads);
-            int64_t my_partial_sum = 0;
-            std::ranges::for_each(my_values, [&](auto item) { my_partial_sum += item; });
-            // NOTE: Writing 'partial_sum' only once.
-            partial_sums[my_idx] = my_partial_sum;
-        });
-    });
+NOINLINE void do_sum(volatile int64_t* out, std::span<const int64_t> values) {
+    for (const auto& v : values) {
+        *out += v;
+    }
+}
+
+
+int64_t false_sharing(std::span<const int64_t> values, size_t nthreads) {
+    const auto partitions = partition_values(values, nthreads);
+    std::vector<int64_t> partition_sums(nthreads, 0);
+
+    std::vector<std::thread> threads;
+
+    for (size_t thread_idx = 0; thread_idx < nthreads; ++thread_idx) {
+        threads.push_back(std::thread([&partition_sums, &partitions, thread_idx] {
+            do_sum(&partition_sums[thread_idx], partitions[thread_idx]);
+        }));
+    }
+
     std::ranges::for_each(threads, [](auto& th) { th.join(); });
-    return std::reduce(partial_sums.begin(), partial_sums.end(), 0);
+    return std::reduce(partition_sums.begin(), partition_sums.end(), 0LL);
+}
+
+
+int64_t no_false_sharing(std::span<const int64_t> values, size_t nthreads) {
+    const auto partitions = partition_values(values, nthreads);
+    std::vector<int64_t> partition_sums(nthreads, 0);
+
+    std::vector<std::thread> threads;
+
+    for (size_t thread_idx = 0; thread_idx < nthreads; ++thread_idx) {
+        threads.push_back(std::thread([&partition_sums, &partitions, thread_idx] {
+            int64_t local = 0;
+            do_sum(&local, partitions[thread_idx]);
+            partition_sums[thread_idx] = local;
+        }));
+    }
+
+    std::ranges::for_each(threads, [](auto& th) { th.join(); });
+    return std::reduce(partition_sums.begin(), partition_sums.end(), 0LL);
 }
 
 
@@ -57,18 +76,28 @@ int main() {
     using std::chrono::milliseconds;
 
     std::vector<int64_t> values(1'000'000'000, 1);
+    const size_t max_nthreads = std::min(size_t(std::thread::hardware_concurrency()), size_t(64) / sizeof(int64_t));
 
-    {
-        const auto start = high_resolution_clock::now();
-        std::cout << without_false_sharing(values) << std::endl;
-        const auto end = high_resolution_clock::now();
-        std::cout << "without false sharing: " << duration_cast<milliseconds>(end - start).count() << " ms" << std::endl;
-    }
+    for (int nthreads = 1; nthreads <= max_nthreads; ++nthreads) {
+        std::cout << "nthreads=" << nthreads << std::endl;
+        {
+            const auto start = high_resolution_clock::now();
+            const auto result = no_false_sharing(values, nthreads);
+            const auto end = high_resolution_clock::now();
+            std::cout << "  no false sharing: "
+                      << duration_cast<milliseconds>(end - start).count() << " ms"
+                      << " (result=" << result << ")"
+                      << std::endl;
+        }
 
-    {
-        const auto start = high_resolution_clock::now();
-        std::cout << with_false_sharing(values) << std::endl;
-        const auto end = high_resolution_clock::now();
-        std::cout << "with false sharing: " << duration_cast<milliseconds>(end - start).count() << " ms" << std::endl;
+        {
+            const auto start = high_resolution_clock::now();
+            const auto result = false_sharing(values, nthreads);
+            const auto end = high_resolution_clock::now();
+            std::cout << "  false sharing:    "
+                      << duration_cast<milliseconds>(end - start).count() << " ms"
+                      << " (result=" << result << ")"
+                      << std::endl;
+        }
     }
 }
