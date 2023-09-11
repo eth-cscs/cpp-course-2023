@@ -33,8 +33,8 @@ In the past 25 years:
 
 Consequence:
 - Applications can easily get memory bound
-- Performant application must use memory efficiently
-
+- Performant applications must use memory efficiently
+- Efficient memory use requires careful design
 
 
 ---
@@ -51,7 +51,7 @@ Consequence:
 ---
 
 
-# Modern systems: memory hierarchy
+# Memory hierarchy of modern systems
 
 | Memory | Technology | Latency | Bandwidth | Price |
 |--------------|-----------|------------|--------------|---|
@@ -68,6 +68,104 @@ Consequence:
 
 ---
 
+# How DRAM works
+
+- The organization and operation of DDR SDRAM is quite complex, we'll have a simplified view
+- Reading procedure:
+    1. Select the address you want to read
+    2. Wait until the DRAM serves you the data - this can take a while
+    3. Read out requested data (32, 64 or 128 bits at once)
+    4. Read the next address:
+        - Reading from nearby locations is quick
+        - If reading from elsewhere you have to wait again until you get the data
+- Burst mode:
+    - You would normally get 64 bits of data
+    - The DRAM can give you 8 consecutive blocks of 64 bits too
+    - You don't need to wait between the 8 data packets, they come quickly after each other
+    - That makes a chunks of 8x 64 bits == 64 bytes (remember that number!)
+- Pretty much the same goes for writes
+
+---
+
+# Lesson #1: buy one, get 64 (1)
+
+How to use DRAM poorly:
+- Let's take a huge array of `int64`s and sum every 8th element
+- This uses the first 8 bytes of a 64 byte burst
+
+```c++
+int64_t sum_every_8th(std::span<int64_t> values) {
+    int64_t sum = 0;
+    for (size_t idx = 0; idx < (values.size() & ~7u); idx += 8) {
+        // Pick first element out of a block of 8.
+        sum += values[idx + 0];
+    }
+    return sum;
+}
+```
+
+TODO: add illustration
+
+---
+
+# Lesson #1: buy one, get 64 (2)
+
+How to use DRAM well:
+- Let's take a huge array of `int64`s and sum all elements
+- This uses all 64 bytes of a 64 byte burst
+
+```c++
+int64_t sum_all(std::span<int64_t> values) {
+    int64_t sum = 0;
+    for (size_t idx = 0; idx < (values.size() & ~7u); idx += 8) {
+        // Pairwise sum of all elements in a block of 8.
+        sum += ((values[idx + 0] + values[idx + 1])
+                + (values[idx + 2] + values[idx + 3]))
+               + ((values[idx + 4] + values[idx + 5])
+                  + (values[idx + 6] + values[idx + 7]));
+    }
+    return sum;
+}
+```
+
+TODO: add illustration
+
+---
+
+# Lesson #1: buy one, get 64 (3)
+
+**Question: how does the execution time of the two algorithms compare?** You can assume they both get the same input.
+- (a) **Every 8th element faster**
+- (b) **Equal**
+- (c) **All elements faster**
+
+**Make your bets!**
+
+---
+
+# Lesson #1: buy one, get 64 (4)
+
+Results on my system:
+```
+sum all:       1130 ms, 37.9886  GiB/s
+sum every 8th:  937 ms,  5.72767 GiB/s
+```
+
+*The theoretical maximum bandwidth of my computer is 53.6 GiB/s, so the benchmark was really (mostly) memory bound.*
+
+**Answer: they run in (essentially) equal time.** We've requested 8 bytes, but we got 64 for free. The arithmetic we did on the free bytes was mostly hidden.
+
+**Takeaway**: look at your calculation (*transform*), group together all data it uses, put data it doesn't use elsewhere. **Be aware of DRAM bursts!**
+
+---
+
+# Lesson #2: take small steps (1)
+
+
+
+---
+
+
 # References
 
 - https://www.techpowerup.com/cpu-specs/pentium-ii-xeon-400.c2962
@@ -76,6 +174,7 @@ Consequence:
 - https://en.wikipedia.org/wiki/DDR5_SDRAM
 - https://www.agner.org/optimize/instruction_tables.pdf
 - https://www.intel.com/content/www/us/en/developer/articles/technical/memory-performance-in-a-nutshell.html
+- https://compas.cs.stonybrook.edu/~nhonarmand/courses/sp15/cse502/res/dramop.pdf
 
 
 ---
