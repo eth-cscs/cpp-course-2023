@@ -159,7 +159,7 @@ sum every 8th:  937 ms,  5.72767 GiB/s
 
 ---
 
-# Lesson #2: take small steps (1)
+# Lesson #2: read large sections (1)
 
 
 
