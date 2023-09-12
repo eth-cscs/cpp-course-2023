@@ -51,7 +51,7 @@ Consequence:
 ---
 
 
-# Memory hierarchy of modern systems
+# Theory: memory hierarchy of modern systems
 
 | Memory | Technology | Latency | Bandwidth | Price |
 |--------------|-----------|------------|--------------|---|
@@ -68,7 +68,7 @@ Consequence:
 
 ---
 
-# How DRAM works
+# Theory: operation of DRAM
 
 - The organization and operation of DDR SDRAM is quite complex, we'll have a simplified view
 - Reading procedure:
@@ -157,6 +157,8 @@ sum every 8th:  937 ms,  5.72767 GiB/s
 
 **Takeaway**: look at your calculation (*transform*), group together all data it uses, put data it doesn't use elsewhere. **You can't read a single byte from DRAM, you always read at least 64 bytes!**
 
+**Note**: the tests eliminate the effect of CPU caching and prefetching as much as possible.
+
 ---
 
 # Lesson #2: reads vs. block size (1)
@@ -193,6 +195,142 @@ Test method:
 
 </div>
 </div>
+
+---
+
+# Lesson #2: reads vs. block size (3)
+
+- Sequential access is much faster (40 GB/s) than randomized access (16 GB/s)
+- Sequential access:
+    - The larger the block size, the better the bandwidth
+- Randomized access:
+    - Small and large block sizes are equally slow, the sweet spot is at 256*64 bytes
+    - Explanation: DRAM is organized in rows and columns, and while changing a column is cheap, changing a row is expensive. The sweet spot corresponds to the fewest row changes, which likely explains the performance increase there.
+
+**Question**: if column changes should have a very small cost, why does randomized access not peak at 40 GB/s? *The answer is left as an exercise to the reader.*
+
+**Takeaway**: randomized access to the DRAM appears to be 3-4 times slower than sequential access, make sure to access memory in regular patterns and large contiguous blocks.
+
+**Note**: the tests eliminate the effect of CPU caching and prefetching as much as possible.
+
+---
+
+# Theory: CPU cache hierarchy
+
+Modern CPUs typically emply 3 levels of caching:
+| Memory | Typical size | Count | Description |
+|--------------|------|-----|------------|
+| Registers | 64 bit | Many per core | The CPU can readily do arithmetic & logic only on registers. |
+| **L1 cache** | ~64 kB | 1 per core | Small, ultra-fast memory, each CPU core has a dedicated instance. |
+| **L2 cache** | ~1 MB | 1 per core | Very fast memory, each CPU core has a dedicated instance. |
+| **L3 cache** | ~32 MB | 1 per package | Fast memory, this one is shared accross all CPU cores. |
+| DRAM | 32 GB | 1-4 channels |  |
+
+---
+
+# Theory: cached memory reads
+
+<div class="twocolumns">
+<div>
+
+**Goal**: bring 1 byte from DRAM into a register
+
+**Procedure**:
+1. Check if data is in L1 cache
+2. Check if data is in L2 cache
+3. Check if data is in L3 cache
+4. Get data from DRAM
+5. Insert data into L3 cache (+ address & metadata)
+6. Insert data into L2 cache
+7. Insert data into L1 cache
+8. Write data into register
+
+**Making space** : old data will be removed from the cache so that new can be inserted
+
+</div>
+<div>
+
+**Cache hit**:
+- If the data is found in any of the L1-L3 caches, we have a *cache hit*
+- In that case, data is retrieved from there and written into the register, and the procedure terminates
+
+**Cache miss**:
+- If data is *NOT* found in the L? cache, we talk about an *L? cache miss*
+- In that case, the procedure continues by checking the next cache level
+
+</div>
+</div>
+
+---
+
+# Theory: cached memory writes
+
+<div class="twocolumns">
+<div>
+
+**Goal**: move 1 byte from register to DRAM
+
+**Procedure**:
+1. Read data from register
+2. Insert data into L1 cache
+</div>
+<div>
+
+**When is data actually written into DRAM?**
+- Each piece of data written to L1 like this is flagged as *updated*
+- When space in L1 is reclaimed, *updated* data gets written back to L2
+- When space in L2 is reclaimed, the data again gets written back to L3 and then finally the DRAM
+
+</div>
+</div>
+
+---
+
+# Theory: cache entries
+
+<div class="twocolumns">
+<div>
+
+**Cache lines**:
+- Data in the caches is organized into so-called *cache lines*
+- A cache line is typically 64 bytes (same as DRAM burst length, but could be different)
+- Each cache entry stores
+  - The data of the cache line
+  - The memory address of the data
+  - Information about the data (e.g. valid, updated, etc.)
+
+</div>
+<div>
+
+**Replacement policies**:
+- Once the cache is full, we cannot put more entries
+- We must remove some entries to free up space
+- Which entry should we remove?
+  - Many strategies
+  - Most practical is the *least recently used (LRU)* algorithm, or some variations of it
+
+</div>
+</div>
+
+---
+
+# Theory: cache coherence
+
+**Problem**: CPU #1 and #2 write, while #3 reads the same memory location simultaneously. What happens?
+
+**Solution**: memory accesses are serialized internally by the CPU, regardless of the initiating core:
+1. CPU #1 writes data into its own L1 cache and invalidates this address in all other caches
+2. CPU #2 writes data into its own L1 cache and invalidates this address in all other caches
+3. CPU #3 reads address that is cached in CPU #2's L1 cache
+    - The data is then flushed to the shared L3 cache
+    - CPU #3 retrieves the data from the L3 cache
+
+**Practical implementations**: there are different methods to implement cache coherence in modern, multi-core CPUs. We will not examine exact implementations, as it's not strictly necessary to understand the main principles.
+
+---
+
+# Lesson #3: keep frequently accessed data in caches
+
 
 ---
 

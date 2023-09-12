@@ -11,6 +11,10 @@ add_executable(03_01_dram_block_size
     code/dram_block_size.cpp
 )
 
+add_executable(03_01_cache_block_size
+    code/cache_block_size.cpp
+)
+
 add_executable(03_01_cache_false_sharing 
     code/cache_false_sharing.cpp
 )
