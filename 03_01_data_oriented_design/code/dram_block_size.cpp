@@ -7,7 +7,7 @@
 #include <random>
 #include <span>
 #include <vector>
-#include <immintrin.h>
+#include <x86intrin.h>
 
 
 
@@ -15,30 +15,36 @@ std::mt19937_64 rne;
 
 
 struct OffsetGenerator {
-    OffsetGenerator(size_t rangeSize, size_t blockSize)
-        : blockSize(blockSize),
-          linearSize((rangeSize - blockSize + 1) / blockSize),
-          rowSize(64),
-          columnSize(linearSize / rowSize) {
-        assert(rangeSize > blockSize);
+    OffsetGenerator(size_t rangeSize, size_t rowSize, bool shuffle)
+        : rowSize(rowSize),
+          columnSize(rangeSize / rowSize) {
+        rowShuffle.resize(rowSize);
+        std::iota(rowShuffle.begin(), rowShuffle.end(), uint16_t(0));
+        if (shuffle) {
+            std::ranges::shuffle(rowShuffle, rne);
+        }
+
+        columnShuffle.resize(columnSize);
+        std::iota(columnShuffle.begin(), columnShuffle.end(), uint32_t(0));
+        std::ranges::shuffle(columnShuffle, rne);
     }
 
     size_t operator()() {
-        const auto linearIdx = rowSize * columnIdx + rowIdx;
-        columnIdx += 1;
-        if (columnIdx >= columnSize) {
-            rowIdx = (rowIdx + 1) % rowSize;
-            columnIdx = 0;
+        const auto linearIdx = rowSize * columnShuffle[columnIdx] + rowShuffle[rowIdx];
+        rowIdx += 1;
+        if (rowIdx >= rowSize) {
+            columnIdx = (columnIdx + 1) % columnSize;
+            rowIdx = 0;
         }
-        return blockSize * linearIdx;
+        return linearIdx;
     }
 
-    const size_t blockSize;
-    const size_t linearSize;
     const size_t rowSize;
     const size_t columnSize;
     size_t rowIdx = 0;
     size_t columnIdx = 0;
+    std::vector<uint16_t> rowShuffle;
+    std::vector<uint32_t> columnShuffle;
 };
 
 
@@ -50,41 +56,46 @@ int main() {
     // 2 gigabytes to overflow L3 cache
     constexpr size_t dataVolume = 2ull * 1024 * 1024 * 1024;
     constexpr size_t numValues = dataVolume / sizeof(int64_t);
-    constexpr size_t reps = 200;
+    constexpr size_t reps = 50;
+    constexpr size_t burstSize = 8;
 
     std::unique_ptr<int64_t, void (*)(void*)> data{
-        static_cast<int64_t*>(std::aligned_alloc(8192, numValues * sizeof(int64_t))),
+        static_cast<int64_t*>(std::aligned_alloc(65536, numValues * sizeof(int64_t))),
         [](void* ptr) { std::free(ptr); }
     };
     std::span<int64_t> values(data.get(), numValues);
     std::ranges::fill(values, 1);
 
 
-    for (size_t blockSize = 4; blockSize <= 1048576; blockSize *= 2) {
-        OffsetGenerator gen{ values.size(), blockSize };
-        int64_t result = 0;
-        __m256i s = _mm256_setzero_si256();
+    for (bool shuffle : { true, false }) {
+        std::cout << "shuffling: " << std::boolalpha << shuffle << std::endl;
+        for (size_t rowSize = 1; rowSize <= 65536; rowSize *= 2) {
+            OffsetGenerator gen{ values.size() / burstSize, rowSize, shuffle };
+            int64_t result = 0;
+            std::array<int64_t*, 16> prefetch;
+            std::ranges::generate(prefetch, [&]() { return values.data() + burstSize * gen(); });
+            size_t prefetchIdx = 0;
 
-        const auto start = high_resolution_clock::now();
-        for (int i = 0; i < 1048576 * reps / blockSize; ++i) {
-            const auto offset = gen();
-            const auto range = values.subspan(offset, blockSize);
-            for (auto it = range.begin(); it < range.end(); it += 4) {
-                const auto v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&*it));
-                s = _mm256_xor_si256(s, v);
-            };
-            result += blockSize;
+            const auto start = high_resolution_clock::now();
+            for (int i = 0; i < 1048576 * reps; ++i) {
+                const auto currentPtr = prefetch[prefetchIdx];
+                const auto prefetchedPtr = values.data() + burstSize * gen();
+                _m_prefetch(prefetchedPtr);
+                prefetch[prefetchIdx] = prefetchedPtr;
+                prefetchIdx = (prefetchIdx + 1) % prefetch.size();
+                result += *currentPtr;
+            }
+            const auto end = high_resolution_clock::now();
+
+            if (result != 1048576 * reps) {
+                throw std::logic_error("incorrect result");
+            }
+
+            const auto time = duration_cast<nanoseconds>(end - start);
+            const float bandwidth = burstSize * result * sizeof(int64_t) / float(time.count());
+            std::cout << "  block size = " << rowSize << ":    "
+                      << duration_cast<milliseconds>(time).count() << " ms, "
+                      << bandwidth << " GB/s" << std::endl;
         }
-        const auto end = high_resolution_clock::now();
-
-        if (result != 1048576 * reps + (s[0] & ~int64_t(0))) {
-            throw std::logic_error("incorrect result");
-        }
-
-        const auto time = duration_cast<nanoseconds>(end - start);
-        const float bandwidth = result * sizeof(int64_t) / float(time.count());
-        std::cout << "block size = " << blockSize << ":    "
-                  << duration_cast<milliseconds>(time).count() << " ms, "
-                  << bandwidth << " GB/s" << std::endl;
     }
 }

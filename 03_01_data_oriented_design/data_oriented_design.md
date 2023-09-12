@@ -89,7 +89,7 @@ Consequence:
 
 # Lesson #1: buy one, get 64 (1)
 
-How to use DRAM poorly:
+How to **use DRAM poorly**:
 - Let's take a huge array of `int64`s and sum every 8th element
 - This uses the first 8 bytes of a 64 byte burst
 
@@ -104,13 +104,13 @@ int64_t sum_every_8th(std::span<int64_t> values) {
 }
 ```
 
-TODO: add illustration
+**TODO: add illustration**
 
 ---
 
 # Lesson #1: buy one, get 64 (2)
 
-How to use DRAM well:
+How to **use DRAM well**:
 - Let's take a huge array of `int64`s and sum all elements
 - This uses all 64 bytes of a 64 byte burst
 
@@ -128,7 +128,7 @@ int64_t sum_all(std::span<int64_t> values) {
 }
 ```
 
-TODO: add illustration
+**TODO: add illustration**
 
 ---
 
@@ -155,16 +155,46 @@ sum every 8th:  937 ms,  5.72767 GiB/s
 
 **Answer: they run in (essentially) equal time.** We've requested 8 bytes, but we got 64 for free. The arithmetic we did on the free bytes was mostly hidden.
 
-**Takeaway**: look at your calculation (*transform*), group together all data it uses, put data it doesn't use elsewhere. **Be aware of DRAM bursts!**
+**Takeaway**: look at your calculation (*transform*), group together all data it uses, put data it doesn't use elsewhere. **You can't read a single byte from DRAM, you always read at least 64 bytes!**
 
 ---
 
-# Lesson #2: read large sections (1)
+# Lesson #2: reads vs. block size (1)
 
+Test method:
+- Allocate a huge chunk of memory
+- Split it into blocks of equal size
+- Read bursts from each block, then change the block
+    - We can read a block from start to end, linearly
+    - We can randomly permute the accesses [start, end)
+- No address is read twice all throughout -- we measure pure DRAM, not cache
+- Explicitly prefetch addresses (explained later) -- we measure DRAM, not HW prefetcher
 
+**TODO: Illustration of memory region split into blocks + accesses**
 
 ---
 
+# Lesson #2: reads vs. block size (2)
+
+
+<div class="twocolumns">
+<div>
+
+## Sequential access
+
+<img src="./images/dram_block_size_sequential.svg" alt="dod_nbody_example" title="" width="100%"/> 
+
+</div>
+<div>
+
+## Randomized access
+
+<img src="./images/dram_block_size_random.svg" alt="dod_nbody_example" title="" width="100%"/> 
+
+</div>
+</div>
+
+---
 
 # References
 
