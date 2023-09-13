@@ -8,67 +8,105 @@ backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
 size: 16:9
 ---
 
-# **Marp**
+# Advanced C++ Course
 ![bg cover](../slides-support/common/title-bg3.png)
 <!-- _paginate: skip  -->
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-### Title topic
+### Future C++
 
-#### Authors, Writers & Teachers
+#### CSCS
 
 --- 
 
-# How to write slides
-Split pages by horizontal ruler (`---`). It's very simple! :satisfied:
+# C++20, 23, 26, and beyond
 
-```markdown
-# Slide 1
-
-foobar
+- New features added regularly
+- Easier than ever to get newer compilers
+- Language gets more complex, but at the same time simpler if you restrict yourself
+- Editorial note: whatever features we cover earlier in the course should of course be removed from here
 
 ---
 
-# Slide 2
+# Overview?
 
-foobar
+- `std::execution`
+- `std::simd`
+- `std::linalg` + `std::mdspan`
+- `std::expected`
+- `std::print`
+
+---
+
+# `std::execution`
+
+- Until now: parallel algorithms (CPU only)
+- Third party vendor solutions:
+  - Thrust (CPU, NVIDIA, AMD)
+  - nvhpc (NVIDIA)
+  - SYCL (Intel, NVIDIA, AMD)
+- Other third party libraries:
+  - Kokkos
+  - Alpaka
+- No generic solution, and no clear winner emerging
+- Generic building blocks in C++ standard
+
+---
+
+# `std::execution`
+
+```
+placeholder for an interesting std::execution example
 ```
 
 ---
 
-# A Slide with two columns
+# `std::execution`
 
-<div class="twocolumns">
-<div>
-
-## Code
-
-```c++
-void f(int x) {
-}
-```
-
-</div>
-<div>
-
-## Explanations
-
-declaration of a function f...
-
-</div>
-</div>
+- Performance portable building blocks
+- Asynchronous code as a first class citizen
+- *Senders* represent work
+- *Schedulers* represent where work runs
+- *Algorithms* represent what work to do
+- Low-level building blocks on target to be included in C++26
+- Reference implementation stdexec supports CPU and CUDA
+- pika developed at CSCS to build on top of the reference implementation
+- Asynchronous parallel algorithms still need to be added on top of `std::execution`
 
 ---
 
-# Testing Math
+# `std::simd`
 
-Writing an expression here:  $ax^2+bx+c$
+- ...
 
-$$ I_{xx}=\int\int_Ry^2f(x,y)\cdot{}dydx $$
+---
 
-$$
-f(x) = \int_{-\infty}^\infty
-    \hat f(\xi)\,e^{2 \pi i \xi x}
-    \,d\xi
-$$
+# `std::linalg`
+
+- Decades of existing practice
+- No more ZGERC
+- Instead: matrix_rank_1_update_c(std::par, x, y, A)
+- Works with mdspan as inputs
+- Execution policies for parallelization
+- GPU support dependent on `std::execution` for parallel algorithms
+
+---
+
+# `std::linalg`
+
+```
+placeholder for interesting std::linalg example
+```
+
+---
+
+# `std::expected`
+
+- ...
+
+---
+
+# `std::print`
+
+- ...
