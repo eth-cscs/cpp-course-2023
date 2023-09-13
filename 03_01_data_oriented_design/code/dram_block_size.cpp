@@ -81,7 +81,7 @@ int main() {
             for (int i = 0; i < 1048576 * reps; ++i) {
                 const auto currentPtr = prefetch[prefetchIdx];
                 const auto prefetchedPtr = values.data() + burstSize * gen();
-                _m_prefetch(prefetchedPtr);
+                _mm_prefetch(prefetchedPtr, _MM_HINT_T0);
                 prefetch[prefetchIdx] = prefetchedPtr;
                 prefetchIdx = (prefetchIdx + 1) % prefetch.size();
                 result += *currentPtr;
