@@ -329,8 +329,185 @@ Modern CPUs typically emply 3 levels of caching:
 
 ---
 
-# Lesson #3: keep frequently accessed data in caches
+# Lesson #3: keep frequently accessed data in caches (1)
 
+Test method:
+- Allocate a memory block of certain size
+- Keep reading that block repeatedly
+- This should move and keep the block in cache when possible
+- Observe performance
+
+---
+
+# Lesson #3: keep frequently accessed data in caches (2)
+
+
+<div class="twocolumns">
+<div>
+
+**Results**:
+
+<img src="./images/cache_block_size.svg" alt="cache_block_size" title="" width="100%"/> 
+
+</div>
+<div>
+
+**Explanation**:
+
+- We see a dip in performance at 512 KiB of data
+    - The data becomes too big to fit in L2
+    - Must use slower L3 cache
+- We see a dip at 64 MiB too
+    - The data becomes too bit to fit in L3
+    - Must use slower DRAM
+- What about L1 and a dip at 32 KiB?
+    - Maybe we are already be ALU-bound
+    - Maybe L1 doesn't have any higher bandwidth (may still have lower latency though!)
+
+**Takeaway**: If you repeatadly access the same data, try to make sure it fits in the fastest cache available.
+
+</div>
+</div>
+
+
+---
+
+# Lesson #4: false sharing is not caring (1)
+
+- Remember *cache lines*?
+    - All the physical memory is split into cache lines
+    - You cannot pull just part of a cache line into the caches
+- What if two CPU cores write the same cache line?
+    - The writes go into each CPUs local L1 cache
+    - Coherence: the writes get serialized, which forces them into L3
+    - **False sharing**: The CPUs don't have to write the exact same address, it's enough if the addresses share a cache line.
+    - **Example**: You have an `std::array<int, 2> a;`, one CPU core is writing `a[0]` while the other is writing `a[1]`. Since the two elements (almost always) share a cache line, this results in false sharing.
+    - **Note**: the CPUs don't actually share any data, this is why it's called *false* sharing.
+
+---
+
+# Lesson #4: false sharing is not caring (2)
+
+So how bad is false sharing?
+
+**Test method**:
+- 
+
+---
+
+# Theory: the prefetcher (1)
+
+<div class="twocolumns">
+<div>
+
+**Imagine the scenario**:
+- Application: CPU, give me `a[4]` and `b[4]`!
+- CPU: Okay, **please wait 50 ns**, DRAM is slow
+- Application: ...
+- CPU: Here is `a[4]` and `b[4]`
+- Application: CPU, add `a[4]` and `b[4]`!
+- CPU: Here is `a[4]` + `b[4]`
+- Application: CPU, give me `a[5]` and `b[5]`!
+- CPU: Okay, **please wait 50 ns**, DRAM is slow
+- ...
+
+</div>
+<div>
+
+**What if instead we had this**:
+
+- Application: CPU, give me `a[4]` and `b[4]`!
+- CPU: Okay, **please wait 50 ns**, DRAM is slow
+- (CPU: **I bet he's gonna get** `a[5]` and `b[5]` next, better request it now.)
+- Application: ...
+- CPU: Here is `a[4]` and `b[4]`
+- Application: CPU, add `a[4]` and `b[4]`!
+- CPU: Here is `a[4]` + `b[4]`
+- Application: CPU, give me `a[5]` and `b[5]`!
+- CPU: I expected you to want it, **here is** `a[4]` + `b[4]`
+- ...
+
+</div>
+</div>
+
+---
+
+# Theory: the prefetcher (2)
+
+- In fact, this is how modern CPUs actually work
+- They try to predict memory access patterns and data to cache before it's requested
+
+<div class="tworows">
+<div>
+
+**Without prefetching**:
+
+<div style="margin-top:16px">
+<img src="./images/cache_no_prefetch_latency.drawio.svg" alt="cache_block_size" title="" width="62%"/>
+</div>
+
+</div>
+<div>
+
+**With prefetching**:
+
+<div style="margin-top:16px">
+<img src="./images/cache_prefetch_latency.drawio.svg" alt="cache_block_size" title="" width="62%"/>
+</div>
+
+</div>
+</div>
+
+---
+
+# Lesson #5: make use of the prefetcher (1)
+
+You can do it in two ways:
+1. Access memory in predictable patterns
+    - Sequential access is always a hit
+    - Otherwise, measure
+2. Issue explicit `PREFETCHT0` or similar instructions
+    - Not super portable
+    - Be careful not to make things worse
+
+
+---
+
+# Lesson #5: make use of the prefetcher (2)
+
+- Remember our reads within differently sized blocks test?
+- I used `PREFETCHT0` all throughout, what if we remove it?
+
+<div class="twocolumns">
+<div>
+
+## Sequential access
+
+<img src="./images/cache_prefetch_block_size_sequential.svg" alt="dod_nbody_example" title="" width="100%"/> 
+
+</div>
+<div>
+
+## Randomized access
+
+<img src="./images/cache_prefetch_block_size_random.svg" alt="dod_nbody_example" title="" width="100%"/> 
+
+</div>
+</div>
+
+---
+
+# Lesson #5: make use of the prefetcher (3)
+
+**Results**:
+- Performance somewhat affected for sequential reads
+    - The CPU's hardware prefetcher does a good job
+    - My manual prefetch probably has a longer look-ahead
+- Performance drastically affected for random reads
+    - The CPU's hardware prefetcher is basically useless here
+
+**Takeaway**: 
+Play your data into the hands of the hardware prefetcher. If you can't, consider using manual prefetching.
 
 ---
 

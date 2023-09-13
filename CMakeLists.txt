@@ -11,6 +11,17 @@ if (${CPP_COURSE_BUILD_SLIDES})
 endif()
 
 
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
+    set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+	set(CPP_COURSE_AVX_OPTION "/arch:AVX2")
+endif()
+
+
 add_subdirectory(01_01_introduction)
 add_subdirectory(01_02_infrastructure_resources)
 add_subdirectory(01_03_initialization_etc)
