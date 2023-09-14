@@ -391,7 +391,50 @@ Test method:
 So how bad is false sharing?
 
 **Test method**:
-- 
+- Take a large array of numbers
+- Split it into batches
+- Sum each batch in a new thread
+- Sum the partial results
+- **False sharing**: put each thread's accumulator in the same cache line!
+
+TODO: illustration of batches and accumulators
+
+---
+
+# Lesson #4: false sharing is not caring (3)
+
+
+<div class="twocolumns">
+<div>
+
+**Results**:
+
+| Number of threads | Time clean | Time false sharing |
+|---|---|---|
+| 1 | 297 ms | 300 ms |
+| 2 | 177 ms | 1563 ms |
+| 3 | 158 ms | 1721 ms |
+| 4 | 161 ms | 6322 ms |
+| 5 | 157 ms | 8295 ms |
+| 6 | 158 ms | 3374 ms |
+| 7 | 157 ms | 4810 ms |
+| 8 | 158 ms | 6082 ms |
+
+
+</div>
+<div>
+
+**Explanation**:
+- One thread cannot have false sharing, times are virtually the same
+- Clean: no speedup beyond 2 CPU cores, at that point it's already memory bound
+- False sharing: performance severly impacted by all the synchronization between CPU cores
+
+**Note**: this is a made-up example for demonstration purposes. False sharing most often occurs with lockless data structures relying on atomics.
+
+**Takeaway**: make sure not to put independent resources that are written by multiple threads into the same cache line. Performance can be affected drastically.
+
+</div>
+</div>
 
 ---
 
@@ -521,6 +564,19 @@ Play your data into the hands of the hardware prefetcher. If you can't, consider
 - https://www.intel.com/content/www/us/en/developer/articles/technical/memory-performance-in-a-nutshell.html
 - https://compas.cs.stonybrook.edu/~nhonarmand/courses/sp15/cse502/res/dramop.pdf
 
+---
+
+# Resources
+
+<div style="text-align:center;">
+
+Get the slides and full source code on GitHub:
+
+<img src="../images/repo_link_qr.gif" alt="dod_nbody_example" title="" width="30%"/>
+
+[https://github.com/eth-cscs/cpp-course-2023](https://github.com/eth-cscs/cpp-course-2023)
+
+</div>
 
 ---
 
