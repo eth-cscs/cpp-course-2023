@@ -57,7 +57,7 @@ int main() {
         }
         const auto end = high_resolution_clock::now();
 
-        if (acc[0] != 1) {
+        if (_mm256_extract_epi64(acc, 0) != 1) {
             throw std::logic_error("incorrect result");
         }
 

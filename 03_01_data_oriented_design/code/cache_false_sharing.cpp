@@ -8,9 +8,9 @@
 #include <vector>
 
 #ifdef _MSC_VER
-#define NOINLINE __declspec(noinline)
+    #define NOINLINE __declspec(noinline)
 #else
-#define NOINLINE __attribute__((noinline))
+    #define NOINLINE __attribute__((noinline))
 #endif
 
 
@@ -29,8 +29,9 @@ std::vector<std::span<const int64_t>> partition_values(std::span<const int64_t> 
 
 
 NOINLINE void do_sum(volatile int64_t* out, std::span<const int64_t> values) {
-    for (const auto& v : values) {
-        *out += v;
+    for (const auto& item : values) {
+        const auto current = *out;
+        *out = current + item;
     }
 }
 

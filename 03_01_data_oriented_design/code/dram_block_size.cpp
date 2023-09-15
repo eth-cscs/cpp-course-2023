@@ -1,14 +1,15 @@
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cstdlib>
+#include <immintrin.h>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <random>
 #include <span>
 #include <vector>
-#include <x86intrin.h>
 
 
 
@@ -61,8 +62,8 @@ int main() {
     constexpr size_t burstSize = 8;
 
     std::unique_ptr<int64_t, void (*)(void*)> data{
-        static_cast<int64_t*>(std::aligned_alloc(65536, numValues * sizeof(int64_t))),
-        [](void* ptr) { std::free(ptr); }
+        static_cast<int64_t*>(::operator new[](sizeof(int64_t) * numValues, std::align_val_t{ 65536 })),
+        [](void* ptr) { ::operator delete[](ptr, std::align_val_t{ 65536 }); }
     };
     std::span<int64_t> values(data.get(), numValues);
     std::ranges::fill(values, 1);
@@ -81,7 +82,7 @@ int main() {
             for (int i = 0; i < 1048576 * reps; ++i) {
                 const auto currentPtr = prefetch[prefetchIdx];
                 const auto prefetchedPtr = values.data() + burstSize * gen();
-                _mm_prefetch(prefetchedPtr, _MM_HINT_T0);
+                _mm_prefetch(reinterpret_cast<const char*>(prefetchedPtr), _MM_HINT_T0);
                 prefetch[prefetchIdx] = prefetchedPtr;
                 prefetchIdx = (prefetchIdx + 1) % prefetch.size();
                 result += *currentPtr;
