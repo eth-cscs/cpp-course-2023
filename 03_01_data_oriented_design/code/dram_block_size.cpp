@@ -2,13 +2,13 @@
 #include <cassert>
 #include <chrono>
 #include <cstdlib>
+#include <immintrin.h>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <random>
 #include <span>
 #include <vector>
-#include <x86intrin.h>
 
 
 
