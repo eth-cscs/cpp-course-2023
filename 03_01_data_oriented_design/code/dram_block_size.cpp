@@ -62,7 +62,7 @@ int main() {
     constexpr size_t burstSize = 8;
 
     std::unique_ptr<int64_t, void (*)(void*)> data{
-        new (std::align_val_t{ 65536 }) int64_t[numValues],
+        static_cast<int64_t*>(::operator new[](sizeof(int64_t) * numValues, std::align_val_t{ 65536 })),
         [](void* ptr) { ::operator delete[](ptr, std::align_val_t{ 65536 }); }
     };
     std::span<int64_t> values(data.get(), numValues);
