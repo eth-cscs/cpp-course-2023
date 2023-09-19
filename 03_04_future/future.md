@@ -1,7 +1,7 @@
 ---
 marp: true
 theme: cscs
-# class: lead
+class: lead
 paginate: true
 backgroundColor: #fff
 backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
@@ -20,22 +20,72 @@ size: 16:9
 
 --- 
 
+# C++ standardization process
+
+<div class="twocolumns">
+<div>
+
+- C++ standardized under the ISO in "Working Group 21" (WG21)
+  - C is WG14
+- From proposal to standardization:
+  - "Study groups" evaluate proposals, discuss merits, improve design
+  - "(Library) Evolution Working Group" evaluates how well the design fits C++ as a whole
+  - "Core/Library Working Group" evaluates wording
+  - Full committee vote with "National Bodies" (NB)
+- [More information](https://isocpp.org/std)
+
+</div>
+<div>
+  
+![w:900](https://isocpp.org/files/img/wg21-structure-2022-12.png)
+
+</div>
+</div>
+
+--- 
+
 # C++20, 23, 26, and beyond
 
-- New features added regularly
-- Easier than ever to get newer compilers
-- Language gets more complex, but at the same time simpler if you restrict yourself
-- Editorial note: whatever features we cover earlier in the course should of course be removed from here
+- Easier than ever to use third-party libraries: use them whenever you can!
+    - Some features deserve to be standardized to encourage usage by everyone
+- New features added regularly, both to library and language
+    - Easier than ever to get newer compilers
 
 ---
 
-# Overview?
+# What's new in C++?
 
-- `std::execution`
-- `std::simd`
-- `std::linalg` + `std::mdspan`
-- `std::expected`
-- `std::print`
+- Selected subset of features already approved or being standardized:
+    - `std::format` and `std::print`
+    - `std::expected`
+    - `std::execution`
+    - `std::simd`
+    - `std::linalg` + `std::mdspan`
+
+---
+
+# `std::format` and `std::print`
+
+- C's `printf`: convenient but not type safe
+- C++'s iostreams: clunky and stateful but type safe
+- What if we could have both (and go a bit further)?
+  - C++20 introduced `std::format`
+  - C++23 introduced `std::print` and `std::println`
+  - https://godbolt.org/z/MqKPxzzxM
+    ```c++
+    std::print(
+        "Hello {}!\npadding: {:#08x}\nalignment: {:>30}\nprecision: {:.2f}\n",
+        "Bjarne", 42, "short", std::numbers::pi_v<float>);
+    ```
+  - user-generated `static_assert` messages: https://wg21.link/p2741
+- What to do until C++23 is well supported?
+  - Use [fmt](https://fmt.dev)
+
+---
+
+# `std::expected`
+
+- ...
 
 ---
 
@@ -49,15 +99,25 @@ size: 16:9
 - Other third party libraries:
   - Kokkos
   - Alpaka
-- No generic solution, and no clear winner emerging
-- Generic building blocks in C++ standard
+- `std::execution` aims to put generic building blocks in C++ standard
 
 ---
 
-# `std::execution`
+# `std::execution` hello world
 
-```
-placeholder for an interesting std::execution example
+```c++
+using namespace std::execution;
+
+scheduler auto sch = thread_pool.scheduler();
+
+sender auto begin = schedule(sch);
+sender auto hi = then(begin, []{
+    std::cout << "Hello world! Have an int.";
+    return 13;
+});
+sender auto add_42 = then(hi, [](int arg) { return arg + 42; });
+
+auto [i] = this_thread::sync_wait(add_42).value();
 ```
 
 ---
@@ -65,14 +125,13 @@ placeholder for an interesting std::execution example
 # `std::execution`
 
 - Performance portable building blocks
-- Asynchronous code as a first class citizen
 - *Senders* represent work
 - *Schedulers* represent where work runs
 - *Algorithms* represent what work to do
-- Low-level building blocks on target to be included in C++26
-- Reference implementation stdexec supports CPU and CUDA
-- pika developed at CSCS to build on top of the reference implementation
-- Asynchronous parallel algorithms still need to be added on top of `std::execution`
+- Reference implementation can already be used today: [stdexec](https://github.com/NVIDIA/stdexec)
+- CSCS developing [pika](https://github.com/pika-org/pika): builds functionality on top of `std::execution`
+- Targeted for C++26
+- Proposal: https://wg21.link/p2300
 
 ---
 
@@ -84,29 +143,34 @@ placeholder for an interesting std::execution example
 
 # `std::linalg`
 
-- Decades of existing practice
-- No more ZGERC
-- Instead: matrix_rank_1_update_c(std::par, x, y, A)
-- Works with mdspan as inputs
+- Decades of existing practice in BLAS
+- No more ZGERC, instead `matrix_rank_1_update_c(std::par, x, y, A)`
+- Works with `std::mdspan` as inputs
 - Execution policies for parallelization
-- GPU support dependent on `std::execution` for parallel algorithms
+- GPU support dependent on `std::execution` support for parallel algorithms
+- Targeted for C++26
+- Proposal: https://wg21.link/p1673
 
 ---
 
-# `std::linalg`
+# `std::linalg` cholesky
 
+```c++
+template<in-matrix InMat, class Triangle, in-vector InVec, out-vector OutVec>
+void cholesky_solve(InMat A, Triangle t, InVec b, OutVec x)
+{
+  using namespace std::linalg;
+
+  if constexpr (std::is_same_v<Triangle, upper_triangle_t>) {
+    // Solve Ax=b where A = U^T U
+    // Solve U^T c = b, using x to store c.
+    triangular_matrix_vector_solve(transposed(A),
+      opposite_triangle(t), explicit_diagonal, b, x);
+    // Solve U x = c, overwriting x with result.
+    triangular_matrix_vector_solve(A, t, explicit_diagonal, x);
+  }
+  else {
+    // ...
+  }
+}
 ```
-placeholder for interesting std::linalg example
-```
-
----
-
-# `std::expected`
-
-- ...
-
----
-
-# `std::print`
-
-- ...
