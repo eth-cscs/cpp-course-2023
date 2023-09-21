@@ -584,6 +584,18 @@ Get the slides and full source code on GitHub:
 
 ---
 
+# Potential to do list
+
+- Talk about how C++ helps dealing with memory (layouts, padding, alignment, numa?, etc.)
+  - `alignas`
+  - `aligned_alloc` (not supported everywhere)
+  - `hardware_*_interference_size` (requires definition sometimes)
+  - class layout (padding for alignment)
+  - padding for cache lines
+  - not C++: but first touch? bonus...
+
+---
+
 # How to write slides
 Split pages by horizontal ruler (`---`). It's very simple! :satisfied:
 
