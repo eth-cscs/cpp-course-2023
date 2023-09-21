@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - ci-marp-base-image
   pull_request:
     branches:
       - master
