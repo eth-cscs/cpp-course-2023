@@ -44,23 +44,29 @@ size: 16:9
 
 --- 
 
-# C++20, 23, 26, and beyond
+# Moving to newer standards
 
-- Easier than ever to use third-party libraries: use them whenever you can!
-    - Some features deserve to be standardized to encourage usage by everyone
-- New features added regularly, both to library and language
-    - Easier than ever to get newer compilers
+- C++23 recently finalized and compiler support is also getting finalized, yet many are still stuck with C++17
+- Easier than ever to use newer compilers, but even with system compilers getting C++20 support is now relatively easy
+- Biggest obstacle to upgrading is NVIDIA compilers
+  - From experience: if you can separate your CUDA kernels from your regular source files you will have an easier time moving to newer standards
+- Sticking with GCC and clang will get you furthest (honorable mention to MSVC which has been improving rapidly lately)
+- Following best practices with CI helps make upgrades as painless as possible
+  - Testing with warnings (and errors) enabled with _multiple_ compilers helps catch problems early
+- Excellent resource for checking compiler support: https://en.cppreference.com/w/cpp/compiler_support
 
 ---
 
 # What's new in C++?
 
-- Selected subset of features already approved or being standardized:
-    - `std::format` and `std::print`
-    - `std::expected`
-    - `std::execution`
-    - `std::simd`
-    - `std::linalg` + `std::mdspan`
+- The past sessions have covered advanced C++ topics up to C++23
+- Features that didn't fit previous sessions, but are good to know about:
+  - `std::format` and `std::print`
+  - `std::expected`
+- Features useful for HPC that are targeted for C++26:
+  - `std::execution`
+  - `std::simd`
+  - `std::linalg` + `std::mdspan`
 
 ---
 
@@ -95,7 +101,7 @@ size: 16:9
 - Third party vendor solutions:
   - Thrust (CPU, NVIDIA, AMD)
   - nvhpc (NVIDIA)
-  - SYCL (Intel, NVIDIA, AMD)
+  - SYCL (CPU, NVIDIA, AMD)
 - Other third party libraries:
   - Kokkos
   - Alpaka
@@ -160,17 +166,49 @@ template<in-matrix InMat, class Triangle, in-vector InVec, out-vector OutVec>
 void cholesky_solve(InMat A, Triangle t, InVec b, OutVec x)
 {
   using namespace std::linalg;
-
   if constexpr (std::is_same_v<Triangle, upper_triangle_t>) {
     // Solve Ax=b where A = U^T U
     // Solve U^T c = b, using x to store c.
-    triangular_matrix_vector_solve(transposed(A),
-      opposite_triangle(t), explicit_diagonal, b, x);
+    triangular_matrix_vector_solve(transposed(A), opposite_triangle(t), explicit_diagonal, b, x);
     // Solve U x = c, overwriting x with result.
     triangular_matrix_vector_solve(A, t, explicit_diagonal, x);
-  }
-  else {
-    // ...
-  }
+  } else { /* ... */ }
 }
+```
+
+---
+
+# `std::execution` and `std::linalg` use case: DLA-Future
+
+- DLA-Future: distributed linear algebra built on what is currently being standardized
+  - https://github.com/eth-cscs/DLA-Future
+- `std::execution` for
+  - asynchrony (senders)
+  - heterogeneous execution (CPU, CUDA, HIP)
+  - currently covered by [stdexec](https://github.com/NVIDIA/stdexec) and [pika](https://github.com/pika-org/pika)
+- `std::linalg` for
+  - BLAS and LAPACK
+  - currently covered by cuBLAS, rocBLAS, cuSOLVER, rocSOLVER, and DLA-Future because DLA-Future needs asynchronous versions of `std::linalg`
+- networking
+  - currently covered by MPI and [pika](https://github.com/pika-org/pika)
+
+---
+
+# `std::execution` and `std::linalg` use case: DLA-Future
+
+```c++
+using Memory = CPU;
+auto sched = cpu_scheduler;
+
+dlaf::Matrix<T, CPU> m1;
+dlaf::Matrix<T, CPU> m2;
+
+sender auto a = dlaf::comm::recv_tile(ij);
+sender auto b = m1.read(ij);
+sender auto c = m2.readwrite(ij);
+
+sender auto s = std::execution::when_all(a, b, c) |
+    on(cpu_scheduler, dlaf::general_multiplication) |
+    std::execution::then([]() { std::print("matrix-matrix multiplication done\n"); });
+std::this_thread::sync_wait(s);
 ```
