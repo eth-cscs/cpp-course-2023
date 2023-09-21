@@ -154,6 +154,87 @@ void f(Ts&&... ts) {
 
 ---
 
+# `std::optional`
+
+- Traditional use case: failure
+
+```c++
+template <typename T>
+T div(T x, T y) noexcept {
+    return x / y; // May be undefined behaviour
+}
+
+template <typename T>
+std::optional<T> safeish_div(T x, T y) noexcept {
+    if (y == T{0}) { return std::nullopt; }
+    else { return x / y; }
+}
+```
+
+- However, `std::expected` (C++23) or exceptions are generally still a better choice because they cal tell you _why_ something failed
+
+---
+
+# `std::optional`
+
+- Traditional use case: missing value
+
+```c++
+std::vector<int> v1;
+int x1 = v1.pop_back(); // Undefined behaviour
+
+myvector<int> v2;
+// Use of x2 requires explicit checking that it's valid
+std::optional<int> x2 = v2.pop_back();
+```
+
+---
+
+# `std::optional`
+
+- Generic programming use case: storing non-default-constructible types
+
+<div class="twocolumns">
+<div>
+
+```c++
+struct mytype {
+    mytype() = delete;
+    mytype(int x) : x(x) {}
+    // copy and move constructors/assignment
+};
+template <typename T>
+struct mycontainer {
+    // Requires that T is default-constructible
+    T x;
+};
+// mycontainer<mytype> c{}; // not ok
+mycontainer<mytype> c{mytype(42)}; // ok
+```
+
+</div>
+<div>
+
+```c++
+struct mytype {
+    mytype() = delete;
+    mytype(int x) : x(x) {}
+    // copy and move constructors/assignment
+};
+template <typename T>
+struct mycontainer2 {
+    // x can be filled in later without constraints on T
+    std::optional<T> x;
+};
+mycontainer<mytype> c{}; // ok
+mycontainer<mytype> c{mytype(42)}; // ok
+```
+
+</div>
+</div>
+
+---
+
 # `std::variant`
 
 - Closed set of homogeneous types, one is active
@@ -202,50 +283,55 @@ std::visit(myvisitor, v);
 
 # `std::variant`
 
-- TODO: `std::monostate`
+- Use case: Implementing `std::optional`!
+* ```c++
+  template <typename T>
+  struct optional {
+      std::variant<std::monostate, T> v;
+  };
+  ```
 
 ---
 
-# `std::optional`
+# `std::variant`
 
-- storing non-default constructible types
-
-<div class="twocolumns">
-<div>
+- Use case: abstract syntax tree
+- Full example: https://godbolt.org/z/z6qGhGrr1
 
 ```c++
-struct mytype {
-    mytype() = delete;
-    mytype(int x) : x(x) {}
-    // copy and move constructors/assignment
-};
-template <typename T>
-struct mycontainer {
-    T x;
-};
-// mycontainer<mytype> c{}; // not ok
-mycontainer<mytype> c{mytype(42)}; // ok
+template <typename... Ts>
+using sp = std::shared_ptr<Ts...>;
+
+struct add; struct mul; struct lit { int x; };
+using ast = std::variant<lit, sp<add>, sp<mul>>;
+struct add { ast x, y; };
+struct mul { ast x, y; };
+
+int eval(ast a) {
+    std::visit(overloaded(
+        [](lit& l) { return l.x; },
+        [](sp<add>& a) { return eval(a->x) + eval(a->y); },
+        [](sp<mul>& m) { return eval(m->x) * eval(m->y); }),
+        a)
+}
 ```
 
-</div>
-<div>
+---
+
+# `std::variant`
+
+- `std::monostate`: an empty tag type that can be used to make `std::variant` default constructible
 
 ```c++
-struct mytype {
-    mytype() = delete;
-    mytype(int x) : x(x) {}
-    // copy and move constructors/assignment
-};
-template <typename T>
-struct mycontainer2 {
-    std::optional<T> x;
-};
-mycontainer<mytype> c{}; // ok
-mycontainer<mytype> c{mytype(42)}; // ok
+// First type is active after default construction
+// Fails to compile if mytype is not default constructible
+std::variant<mytype, int> v;
 ```
 
-</div>
-</div>
+```c++
+// Always compiles, no matter what mytype is
+std::variant<std::monostate, mytype, int> v;
+```
 
 ---
 
