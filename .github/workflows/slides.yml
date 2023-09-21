@@ -23,11 +23,7 @@ jobs:
     - name: Install dependencies
       shell: bash
       run: |
-        sudo apt update
-        sudo apt install chromium-browser
-        wget https://github.com/marp-team/marp-cli/releases/download/v3.2.1/marp-cli-v3.2.1-linux.tar.gz
-        tar -xf ./marp-cli-v3.2.1-linux.tar.gz
-        sudo ln -s $(pwd)/marp /usr/bin/marp
+        apk add cmake ninja
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
