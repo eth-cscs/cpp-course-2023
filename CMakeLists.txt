@@ -13,12 +13,16 @@ endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "-fno-math-errno")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "-fno-math-errno")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
     set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
 	set(CPP_COURSE_AVX_OPTION "/arch:AVX2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "")
 endif()
 
 
