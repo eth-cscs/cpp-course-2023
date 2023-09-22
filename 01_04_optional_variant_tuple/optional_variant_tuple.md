@@ -349,6 +349,13 @@ std::apply([](auto&&... ts) {
 
 ---
 
+# Bonus exercise: implement `apply`
+
+- TODO: May belong in other generic programming session
+- Example implementation: https://godbolt.org/z/7e4b7sKz5
+
+---
+
 # Enjoy your break: How does the following work?
 
 TODO: Move to function objects etc. session?
