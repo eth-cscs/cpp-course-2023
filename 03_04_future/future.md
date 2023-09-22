@@ -141,6 +141,22 @@ auto [i] = this_thread::sync_wait(add_42).value();
 
 ---
 
+# `std::execution`: not only for asynchrony
+
+- Schedulers (executors) finally get us a step closer to heterogeneous execution of parallel algorithms
+- Blocking overloads of parallel algorithms much simpler to reason about
+- Proposal: https://wg21.link/p2500
+
+```c++
+std::for_each(
+    std::execute_on(scheduler, std::execution::par),
+    begin(data),
+    end(data),
+    f);
+```
+
+---
+
 # `std::simd`
 
 - ...
