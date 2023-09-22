@@ -47,7 +47,7 @@ jobs:
       shell: bash
       run: |
         mkdir slides
-        cp ./*.pdf ./slides/
+        cp ./*.{pdf,html} ./slides/
 
     - name: Archive slides
       uses: actions/upload-artifact@v3
