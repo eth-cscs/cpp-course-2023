@@ -552,3 +552,24 @@ const auto x = [&]() {
     }
 }();
 ```
+
+---
+
+# Enjoy your break: What does this do?
+
+- https://quuxplusone.github.io/blog/2018/05/17/super-elider-round-2/
+- https://akrzemi1.wordpress.com/2018/05/16/rvalues-redefined/
+
+```c++
+template <typename F>
+class foo
+{
+    F&& f;
+
+public:
+    explicit foo(F&& f) : f(std::forward<F>(f)) {}
+
+    using type = decltype(std::declval<F&&>()());
+    operator type() { return std::forward<F>(f)(); }
+};
+```
