@@ -437,6 +437,21 @@ register_startup_handler(print_config);
 
 ---
 
+# Callables, summarized
+
+- Function pointers: use for C compatibility or if you want to guarantee stateless callables
+- Take by generic template parameter if you want the most generic interface
+  - Can constrain with `std::invocable` if necessary
+- Take by `std::function` if you want a simple API where the implementation can be hidden in a source file
+
+| Function parameter | Plain function | Stateless lambda | Stateful lambda | `std::function` |
+| -- | -- | -- | -- | -- |
+| Function pointer | ok | ok | no | [maybe](https://godbolt.org/z/7o9hPhncf) |
+| Template | ok | ok | ok | ok |
+| `std::function` | ok | ok | ok | ok |
+
+---
+
 # Other useful functional utilities
 
 ---
