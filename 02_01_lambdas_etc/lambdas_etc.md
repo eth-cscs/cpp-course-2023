@@ -307,12 +307,14 @@ class my_class {
 
    auto g() {
       // *this copied into lambda capture
-      std::jthread([*this])(){ /* ... */ });
+      auto t = std::thread([*this])(){ /* ... */ });
+      t.detach();
    }
 
    auto f() {
-      // This is a pointer, beware dangling pointer access!
-      std::jthread([this]() { /* ... */ });
+      // this is a pointer, beware dangling pointer access!
+      auto t = std::jthread([this]() { /* ... */ });
+      t.detach();
    }
 };
 ```
@@ -450,7 +452,8 @@ std::string y = "hello";
 // bind_front with only a function is a no-op
 std::bind_front(f)(x, y);
 
-// bind_front reduces the arity of the function by the number of (non-function) arguments passed to bind_front
+// bind_front reduces the arity of the function by the
+// number of (non-function) arguments passed to bind_front
 std::bind_front(f, x)(y);
 std::bind_front(f, x, y)();
 ```
@@ -484,7 +487,7 @@ std::apply(f, t);
 - can opt-in to references in places that normally don't allow references
 
 ```c++
-int f(double, std::string);
+int f(double&, std::string);
 
 int x = 42;
 std::string y = "hello";
@@ -559,6 +562,7 @@ const auto x = [&]() {
 
 - https://quuxplusone.github.io/blog/2018/05/17/super-elider-round-2/
 - https://akrzemi1.wordpress.com/2018/05/16/rvalues-redefined/
+- https://godbolt.org/z/5fxP3EYnn
 
 ```c++
 template <typename F>
