@@ -136,19 +136,19 @@ Why use containers even for simple things:
 
 # Iterators (1)
 
-So say we have this:
+So say we have a `vector` of numbers:
 ```c++
 std::vector<int> numbers(500);
 ```
 
-I'm sure you all know this:
+You can iterate through it by indexing:
 ```c++
 for (int i = 0; i < numbers.size(); ++i) {
     numbers[i] *= 2;
 }
 ```
 
-But do you also know this?
+But you can also do it via *iterators*:
 ```c++
 for (auto it = numbers.begin(); it != numbers.end(); ++it) {
     *it *= 2;
@@ -179,14 +179,14 @@ for (auto it = numbers.begin(); it != numbers.end(); ++it) {
 
 **Safety**:
 - In debug builds, iterators are often checked
-    - Mixing iterators of different containers is checked at runtime
-    - Out of range iterators are checked at runtime
+    - Mixing iterators of different containers is caught at runtime
+    - Out of range iterators are caught at runtime
 
 ---
 
 # Allocators (1)
 
-**Memory allocation in C++**:
+**Multiple options for memory allocations**:
 - `malloc` & `free`
 - `operator new` & `operator delete`
 - Customized allocators: Hoard, tcmalloc, etc.
