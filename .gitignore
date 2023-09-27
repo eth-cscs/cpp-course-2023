@@ -3,5 +3,5 @@
 *.pdf
 build/
 .cache/
-/.vscode/
+/.vscode
 .venv/
