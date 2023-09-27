@@ -20,21 +20,13 @@ size: 16:9
 
 --- 
 
-## Overview
-* Template basics, function and class templates
-* Overloads
-* Argument deduction
-* Partial specialization
-* Default template parameters
-* Non type template parameters
-* SFINAE and enable_if
-* Class template type deduction
-* Basic intro to meta-programming _ integral constant
-* Alias templates
-* Variadic templates
-* Fold Expressions
-* Structured Bindings
-* ->Tuples
+## Templates Overview
+* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions
+, Structured Bindings
+
+## Generic Programming Overview
+* Evolution from functions to TMP
+
 
 
 --- 
@@ -506,6 +498,7 @@ int main() {
 
 `Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
 * use specialization If `T::extra_type` matches `U`
+* [Try it on Compiler explorer](https://godbolt.org/z/nz7n67roe)
 
 ---
 
