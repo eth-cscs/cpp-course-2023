@@ -576,11 +576,91 @@ Play your data into the hands of the hardware prefetcher. If you can't, consider
 
 ---
 
+# Practical memory handling in C++ (1)
+
+## Overaligned memory
+
+**Alignment:** memory address of a variable must be a multiple of X bytes.
+
+<div class="twocolumns">
+<div>
+
+**Why?**
+- SIMD types: aligned load and store may be faster
+- Align to cache lines: to avoid false sharing
+- GPU memory: may help texture units or texture cache
+
+</div>
+<div>
+
+**How?**
+- `alignof` keyword: like `sizeof`, but gives you the alignment
+- `alignas` keyword: specified the alignment of a type/object
+- `std::aligned_alloc`: like `malloc`, but with specific alignment
+- `operator new` / `operator delete`: can now handle overaligned types
+
+</div>
+</div>
+
+---
+
+# Practical memory handling in C++ (2)
+
+## Overaligned memory: example
+
+Consider a vector class suitable for SSE:
+```c++
+struct Vec4 {
+    alignas(16) float elements[4];
+};;
+```
+
+Now you may safely use aligned loads and stores:
+```c++
+Vec4 v; // Our custom vector type
+const auto reg1 = _mm_load_ps(v.elements); // aligned, always fast
+const auto reg2 = _mm_loadu_ps(v.elements); // unaligned, may be slower
+```
+
+Dynammically allocating `Vec4`s also respects the alignment specification:
+```c++
+auto* const vectors = new Vector[1337];
+delete[] vectors;
+```
+
+---
+
+# Practical memory handling in C++ (3)
+
+## Cache lines
+
+- The size of cache lines may be different on different hardware
+- Luckily, C++ has:
+    - `std::hardware_destructive_interference`: *minimum offset between two objects to avoid false sharing"* (from cppreference)
+    - `std::hardware_constructive_interference`: *"maximum size of contiguous memory to promote true sharing"* (from cppreference)
+- Unfortunately...
+    - They are not supported in libstdc++
+    - You have to #ifdef them to a fallback value in reality
+
+---
+
 # Remarks
 
-When to use data-oriented design?
+- There have been announcments that OOP is dead...
+- Data oriented design is just another tool
 
-People's opinions about OOP and DoD
+**Can I still use OOP?**
+- Yes, and you should
+- It's very intuitive and often help with clean code
+
+**When to use DoD?**
+- When it improves your performance
+- Sometimes it even makes your code cleaner!
+
+**Are DoD and OOP exclusive?**
+- No, you can mix them as you see fit
+
+Performance and readability are two different goals, and often one is traded for the other.
 
 ---
 
@@ -593,6 +673,7 @@ People's opinions about OOP and DoD
 - https://www.agner.org/optimize/instruction_tables.pdf
 - https://www.intel.com/content/www/us/en/developer/articles/technical/memory-performance-in-a-nutshell.html
 - https://compas.cs.stonybrook.edu/~nhonarmand/courses/sp15/cse502/res/dramop.pdf
+- https://en.cppreference.com/w/
 
 ---
 
@@ -610,10 +691,6 @@ Get the slides and full source code on GitHub:
 
 ---
 
-# END OF PRESENTATION
-
----
-
 # Potential to do list
 
 - Talk about how C++ helps dealing with memory (layouts, padding, alignment, numa?, etc.)
@@ -623,5 +700,3 @@ Get the slides and full source code on GitHub:
   - class layout (padding for alignment)
   - padding for cache lines
   - not C++: but first touch? bonus...
-
----
