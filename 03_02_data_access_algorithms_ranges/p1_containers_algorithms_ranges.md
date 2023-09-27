@@ -207,13 +207,62 @@ template<
 ```
 
 - By default, `std::allocator` is used, which uses `operator new/operator delete` under the hood
-- You can write your own allocator that uses whatever you want
+- You can also write your own allocator that uses custom routines
 
 ---
 
-# Allocators: PMR (3)
+# Allocators: polymorphic memory resources (PMR) (3)
 
+C++17 PMR consists of 3 main parts:
+- `std::pmr::memory_resource`
+    - A polymorphic base class for memory resources
+    - Standard memory resources include: memory pool, single-threaded pool, stack allocator
+    - You can write your own by extending `memory_resource`
+- `std::pmr::polymorphic_allocator`
+    - Models the allocator concept, just like the previously mentioned `std::allocator`
+    - Internally, uses a `memory_resource` to acquire & release memory
+- `std::pmr::vector`:
+    - Typedef for `std::vector<T, std::pmr::polymorphic_allocator<T>>`
+    - Not just vector, all containers, and strings
 
+---
+
+# Allocators: polymorphic memory resources (PMR) (4)
+
+<div class="twocolumns">
+<div>
+
+**Classic template parameter:**
+
+- Specify the allocator as a template argument of the container class
+- Callee must have an interface that accepts different classes (i.e. templated)
+- Customize memory allocation by implementing the allocator concept in a new class
+- Memory allocation is fully inlined
+
+</div>
+<div>
+
+**Polymorphic allocators:**
+
+- Specify the allocator as a runtime argument of the container instance
+- Callee must accept the PMR version of the container
+- Customize memory allocation by extending the `memory_resource` class
+    - Note the already existing implementation of `memory_resource`!
+- Memory allocation requires a virtual function call
+
+</div>
+</div>
+
+---
+
+# Allocators: polymorphic memory resources (PMR) (5)
+
+**Summary:**
+- PMR results in much cleaner interfaces
+- Mixing PMR and traditional allocators is not practical
+    - Either use PMR consistently, or don't use PMR at all
+- Prefer PMR over traditional allocators when memory allocations are critical
+- Don't drop containers and start using malloc/free with raw pointers, just use PMR
 
 ---
 
