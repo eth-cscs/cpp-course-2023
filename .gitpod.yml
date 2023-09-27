@@ -4,6 +4,7 @@ image:
 
 tasks:
   - init: |
+      ln -s /workspace/cpp-course-2023/.gitpod/.vscode /workspace/cpp-course-2023/.vscode
       cmake -S . -B $(pwd)/build -DCPP_COURSE_BUILD_SLIDES_PDF=OFF
       cmake --build $(pwd)/build
 
