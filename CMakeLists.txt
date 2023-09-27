@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 project(cpp_course_2023)
 
 option(CPP_COURSE_BUILD_SLIDES "Weather to build slides." ON)
+option(CPP_COURSE_BUILD_SLIDES_PDF "Weather to build slides." ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
