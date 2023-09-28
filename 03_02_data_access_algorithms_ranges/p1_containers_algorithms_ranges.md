@@ -91,7 +91,7 @@ for (int i = 0; i < 100; ++i) {
 ```
 
 Oops, you **forgot the delete**!
-You also **forgot to change the size of the loop** at all affected places.
+You also **forgot to change the size of the loop** at some affected places.
 
 ---
 
@@ -128,7 +128,7 @@ Why use containers even for simple things:
 - They manage memory for you, and make sure it doesn't leak
 - They have all the information about your data in one place
 - They provide easy access to and manipulation of your data
-    - Think: how are you gonna resize your array allocated with `new`?
+    - How are you gonna resize your array allocated with `new`?
     - Just use `std::vector::resize` instead
 - The risk of you making an error is much smaller
 
@@ -269,7 +269,7 @@ C++17 PMR consists of 3 main parts:
 # C++ algorithms
 
 - You must've heard about `std::sort`
-- The C++ standard library provides generic implementations of many commonplace algorithms too
+- The C++ standard library provides generic implementations of many common algorithms too
 - The algorithms work on *ranges* of iterators:
     - For example, the `begin()` and `end()` iterators of you container form a range together
     - The underlying container doesn't matter, you can run the algorithms on any range
