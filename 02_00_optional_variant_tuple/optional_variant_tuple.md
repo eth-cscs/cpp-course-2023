@@ -86,6 +86,7 @@ interval i{1.0, 13.5};
 # `std::tuple`: what is it good for?
 
 - `std::tuple<Ts...>`: great for storing packs for later use
+- TODO: Add an example use case
 
 ```c++
 template <typename... Ts>

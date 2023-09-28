@@ -30,7 +30,7 @@ add_subdirectory(01_03_initialization_etc)
 add_subdirectory(01_04_generic_programming_1_templates)
 
 # day 2
-add_subdirectory(01_04_optional_variant_tuple)
+add_subdirectory(02_00_optional_variant_tuple)
 add_subdirectory(02_01_lambdas_etc)
 add_subdirectory(02_03_generic_programming_part2)
 add_subdirectory(02_04_exercises)
