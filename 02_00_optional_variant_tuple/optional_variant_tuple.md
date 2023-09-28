@@ -297,7 +297,7 @@ std::visit(myvisitor, v);
 # `std::variant`
 
 - Use case: abstract syntax tree
-- Full example: https://godbolt.org/z/z6qGhGrr1
+- Full example: https://godbolt.org/z/ecTE1x6h9
 
 ```c++
 template <typename... Ts>
