@@ -16,18 +16,13 @@ size: 16:9
 
 ## Templates Part I
 
-### everyone/JB/Mauro
+### JB
 
 --- 
 
 ## Templates Overview
-* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions
-, Structured Bindings
 
-## Generic Programming Overview
-* Evolution from functions to TMP
-
-
+* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions, Structured Bindings
 
 --- 
 
@@ -36,7 +31,7 @@ size: 16:9
 * A function is defined as return type, name, and arguments
 
 ```c++
-    int add(int x, int y) { return x+y; }
+    int add(int x, int y) { return x + y; }
 
     int main() { add(65, 35);
 ```
@@ -324,9 +319,7 @@ size: 16:9
     }
 ```
 
-`i d A`
-`i f A`
-`i d 65`
+`i d A` `i f A` `i d 65`  
 * 1 The compiler knows `T` and `Another` so it is ok with defaulting `Result`
 * 2 We tell the compiler all 3
 * 3 The compiler can deduce `Another` but we forced `Result` to be float
@@ -498,7 +491,8 @@ int main() {
 
 `Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
 * use specialization If `T::extra_type` matches `U`
-* [Try it on Compiler explorer](https://godbolt.org/z/nz7n67roe)
+* [Compiler explorer link](https://godbolt.org/z/nz7n67roe)
+* [Advanced link](https://godbolt.org/z/bovaf1P8T)
 
 ---
 
@@ -528,6 +522,29 @@ int main() {
 
 * The failed version will not compile so the good version is selected - SFINAE
 
+--- 
+
+## `std::enable_if` : Possible implementations
+
+```c++
+    template<bool B, class T = void> 
+    struct enable_if {};
+
+    template<class T> 
+    struct enable_if<true, T> { 
+        using type = T;
+    };
+
+    template<bool B, class T = void> 
+    struct enable_if;
+
+    template<class T> 
+    struct enable_if<true, T> { 
+        using type = T;
+    };
+
+```
+
 ---
 
 ## SFINAE: `std::enable_if_t` + `std::is_same_v` (less ___cruft___)
@@ -541,7 +558,7 @@ int main() {
         A() { std::cout << "int!\n"; }
     };
 
-    template <typename T> // // does not compile if is_same succeeds
+    template <typename T> // does not compile if is_same succeeds
     struct A<T, std::enable_if_t<!std::is_same_v<T, int>, void>> {
         A() { std::cout << "not int\n"; }
     };
@@ -579,139 +596,7 @@ int main() {
 
 ---
 
-## An example 1/6
-
-* my_container is not a template
-  * my_container is not flexible
-
-```c++
-    struct my_container {
-        using value_t = int;
-        using container_t = vector<value_t>;
-        container_t C;
-
-        my_container(size_t s) : C(s) {}
-    };
-      
-    my_container my_c(42);
-```
-
----
-
-## An example 2/6
-
-* Customizing the basics
-
-```c++
-    template <typename VT>
-    struct my_container {
-        using value_t = VT;
-        using container_t = vector<value_t>;
-        container_t C;
-
-        my_container(size_t s) : C(s) {}
-    };
-
-    my_container my_c<int>(42);
-```
-
----
-
-## An example 3/6
-
-* Customizing the allocator
-
-```c++
-    template <typename VT, typename Allocator = allocator<VT>>
-    struct my_container {
-        using value_t = VT;
-        using container_t = vector<value_t, Allocator>;
-        container_t C;
-
-        my_container(size_t s) : C(s) {}
-    };
-
-      
-    my_container<int> my_c(42);
-    my_container<int, std::allocator<int>> my_c(42);
-    my_container<int, std::allocator<double>> my_c(42);
-```
-
----
-
-## An example 4/6 – Template Template Arguments
-
-* Avoiding redundancies
-
-```c++
-    template <typename VT, 
-              template <typename> class Allocator = allocator>
-    struct my_container {
-        using value_t = VT;
-        using container_t = vector<value_t, Allocator<value_t>>;
-        container_t C;
-
-        my_container(size_t s) : C(s) {}
-    };
-      
-    my_container<int> my_c(42);
-    my_container<int, std::allocator> my_c2(42);
-```
-
----
-
-## An example 5/6
-
-* Being completely explicit
-
-
-```c++
-    template <typename Container>
-    struct my_container {
-        using value_t = typename Container::value_type;
-        using container_t = Container;
-        container_t C;
-
-        my_container(size_t s) : C(s) {}
-    };
-
-    my_container<vector<int, allocator<int>>> my_c(42);
-```
-
----
-
-## An example 6/6
-
-* Customizing the whole
-
-```c++
-    template <typename VT, 
-              template <typename, typename> class CT = vector,
-              template <typename> class Allocator = allocator>
-    struct my_container {
-        using value_t = VT;
-        using container_t = CT<value_t, Allocator<value_t>>;
-        container_t C;
-
-        my_container(size_t s) : C(s) {}
-    };
-
-    my_container<int> my_c(42);
-    my_container<int, vector> my_c2(42);
-    my_container<int, vector, allocator> my_c3(42);
-```
-
----
-
 ## Class Template Type Deduction (C++17)
-
-<table> 
-<tr>
-<th> A </th>
-<th> B </th>
-</tr>
-<tr>
-<td>
 
 ```c++
     template <typename T>
@@ -726,9 +611,6 @@ int main() {
         A y(3); // A<int>
     }
 ```
-
-</td>
-<td>
 
 ```c++
   template <typename F>
@@ -753,26 +635,10 @@ int main() {
   }
 ```
 
-</td> </tr>
-</table>
----
-
-## Title
-
-```c++
-```
-
 ---
 
 ## Class Template Type Deduction (C++17)
 
-<table> 
-<tr>
-<th> A </th>
-<th> B </th>
-</tr>
-<tr>
-<td>
 
 ```c++
     template <typename T>
@@ -789,9 +655,6 @@ int main() {
         A z{y}; // A<int>
     }
 ```
-
-</td>
-<td>
 
 ```c++
     template <typename T , typename U >
@@ -811,8 +674,6 @@ int main() {
     }
 ```
 
-</td> </tr>
-</table>
 ---
 
 ---
@@ -886,7 +747,7 @@ int main() {
     }
 ```
 
-[CompilerExplorer link](https://godbolt.org/z/9KPa4rqYe)
+[Compiler explorer link](https://godbolt.org/z/9KPa4rqYe)
 
 ---
 
@@ -1059,58 +920,238 @@ int main() {
 
 ## Variadic Templates
 
-* A template parameter pack accepts zero or more arguments!
+* A template parameter pack accepts zero or more arguments
   * Using `...` to express packs
-
 
 ```c++
     // a function tanking zero or more arguments 
-    template <typename ...Ts>  
-    void foo(Ts ...args) {}   // parameter pack
+    template <typename... Ts> // parameter pack (the types) 
+    void foo(Ts... args) {}   // parameter pack (the actual values)
 
     // a class templated over zero or more types
-    template <typename ...Ts>
+    template <typename... Ts>
     class A {};
 ```
 ```c++
-    template <typename ...Ts>
-    void foo(Ts ...args) { 
-        function(args...);  // expands to arg1, arg2, arg3 ...
-        pattern(args)...;   // expands to pattern(arg1), pattern(arg2) ... 
-        function(&args...); // expands to function(&arg1, &arg2, &arg3 ...); 
+    template <typename... Ts>
+    void foo(Ts... args) {  
+        function(args...);  // pack-expansion = arg1, arg2, arg3 ...
+        pattern(args)...;   // pack-expansion = pattern(arg1), pattern(arg2) ... 
+        function(&args...); // pack-expansion = function(&arg1, &arg2, &arg3 ...); 
     }
 ```
----
 
-## Title
-
-```c++
-```
+* Whatever the `...` appears after is the thing that is being repeated
 
 ---
 
-## Title
+## Placement of the Variadic Dots `...`
 
-```c++
-```
-
----
-
-## Title
-
-```c++
-```
-
----
-
-## Title
-
-```c++
-```
+* It may at first seem confusing where to put the `...` dots 
+* The dots come **after** whatever is being repeated 
+    * Multiple typenames will be  
+    ```c++
+    template <typename... Ts>
+    ```
+    * The args types `Ts` will be a list (derived from the args)  
+    ```c++
+    void foo(Ts... args) {}
+    ```
+    * The __thing__ before the `...` will be expanded to make a list
+    ```c++
+      pattern(args)...;
+    ```
+* :) If you see ... 
+  ```c++
+    template <typename ...Ts>
+    void foo(Ts ...args) {}
+  ```
 
 --- 
 
-<!-- # Ideas
+## Recursion in action
+
+```c++
+    void pretty_print(std::ostream& s) {
+        s <<"\n";
+    }
+    
+    template <typename T, typename ...Ts>
+    void pretty_print(std::ostream& s, T first, Ts ...values) {
+        s << " {" << first << "} ";
+        pretty_print(s, values...);
+    }
+
+    int main(){
+        pretty_print(std::cout, 3.2, "hello", 42, "world");
+    }
+```
+
+[Compiler Explorer link](https://godbolt.org/z/QTU3Uz)
+
+---
+
+## C++17 Fold Expressions
+* More elaborate pack-expansions (reductions on packs)
+* 4 Flavours of Fold
+  * Unary Right Fold
+    * `(pack op ...)`
+  * Unary Left Fold:=
+    * `(... op pack)`
+  * Binary Right Fold
+    * `(pack op ... op init)`
+  * Binary Left Fold
+    * `(init op ... op pack)`
+  * op may be one of the following (commonly overloaded) operators
+    * `* + - * / % ^ & | = < >`  
+    * `<< >> += -= *= /= %= ^= &= |= <<= >>= == != <= >= && ||`  
+    * ` , .* ->* `  
+
+---
+
+## Unary Left Fold example
+
+```c++
+    template <typename... Args> 
+    bool all(Args... args) {
+        return (... && args);
+    }
+      
+    int main()
+    {
+        bool b = all(true, true, true, false);
+        std::cout << "Result: " << boolalpha << b << std::endl;
+    }
+```
+
+---
+
+## An example 1/6
+
+* my_container is not a template
+  * my_container is not flexible
+
+```c++
+    struct my_container {
+        using value_t = int;
+        using container_t = vector<value_t>;
+        container_t C;
+
+        my_container(size_t s) : C(s) {}
+    };
+      
+    my_container my_c(42);
+```
+
+---
+
+## An example 2/6
+
+* Customizing the basics
+
+```c++
+    template <typename VT>
+    struct my_container {
+        using value_t = VT;
+        using container_t = vector<value_t>;
+        container_t C;
+
+        my_container(size_t s) : C(s) {}
+    };
+
+    my_container my_c<int>(42);
+```
+
+---
+
+## An example 3/6
+
+* Customizing the allocator
+
+```c++
+    template <typename VT, typename Allocator = allocator<VT>>
+    struct my_container {
+        using value_t = VT;
+        using container_t = vector<value_t, Allocator>;
+        container_t C;
+
+        my_container(size_t s) : C(s) {}
+    };
+
+      
+    my_container<int> my_c(42);
+    my_container<int, std::allocator<int>> my_c(42);
+    my_container<int, std::allocator<double>> my_c(42);
+```
+
+---
+
+## An example 4/6 – Template Template Arguments
+
+* Avoiding redundancies
+
+```c++
+    template <typename VT, 
+              template <typename> class Allocator = allocator>
+    struct my_container {
+        using value_t = VT;
+        using container_t = vector<value_t, Allocator<value_t>>;
+        container_t C;
+
+        my_container(size_t s) : C(s) {}
+    };
+      
+    my_container<int> my_c(42);
+    my_container<int, std::allocator> my_c2(42);
+```
+
+---
+
+## An example 5/6
+
+* Being completely explicit
+
+
+```c++
+    template <typename Container>
+    struct my_container {
+        using value_t = typename Container::value_type;
+        using container_t = Container;
+        container_t C;
+
+        my_container(size_t s) : C(s) {}
+    };
+
+    my_container<vector<int, allocator<int>>> my_c(42);
+```
+
+---
+
+## An example 6/6
+
+* Customizing the whole
+
+```c++
+    template <typename VT, 
+              template <typename, typename> class CT = vector,
+              template <typename> class Allocator = allocator>
+    struct my_container {
+        using value_t = VT;
+        using container_t = CT<value_t, Allocator<value_t>>;
+        container_t C;
+
+        my_container(size_t s) : C(s) {}
+    };
+
+    my_container<int> my_c(42);
+    my_container<int, vector> my_c2(42);
+    my_container<int, vector, allocator> my_c3(42);
+```
+
+<!-- 
+--- 
+
+## Ideas
 
 Variant with a visitor - using `auto`
  ```c++

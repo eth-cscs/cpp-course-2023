@@ -1,6 +1,19 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(cpp_course_2023)
+project(cpp_course_2023 CXX)
+
+#------------------------------------------------------------------------------
+# Setup Output directories
+#------------------------------------------------------------------------------
+SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables."
+)
+SET (CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/lib CACHE PATH "Single Directory for all Libraries"
+)
+SET (CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/lib CACHE PATH "Single Directory for all static libraries."
+)
 
 option(CPP_COURSE_BUILD_SLIDES "Weather to build slides." ON)
 option(CPP_COURSE_BUILD_SLIDES_PDF "Weather to build slides." ON)
