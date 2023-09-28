@@ -61,12 +61,34 @@ size: 16:9
 
 - The past sessions have covered advanced C++ topics up to C++23
 - Features that didn't fit previous sessions, but are good to know about:
+  - modules
   - `std::format` and `std::print`
   - `std::expected`
 - Features useful for HPC that are targeted for C++26:
   - `std::execution`
   - `std::simd`
   - `std::linalg` + `std::mdspan`
+
+---
+
+# Modules
+
+- Problem: header includes error prone and slow
+  - "Stateful" headers possible with macros
+  - Parsing transitive headers may be very expensive (https://github.com/s9w/cpp-lit)
+    - Simply enabling C++20 may increase compilation times!
+- C++ modules (C++20) moves away from textual inclusion to a model where exports are explicit, macros don't leak, and build times aren't insane (though they can still be insane with modules)
+- GCC 14, clang 16, and CMake ~3.26 are starting to have usable (but experimental) support for modules
+  - https://godbolt.org/z/von5MfK7T (via https://github.com/compiler-explorer/compiler-explorer/discussions/2763)
+- The modules `std` and `std.compat` were added in C++23
+
+```c++
+import std;
+
+auto main() -> int {
+  std::println("Hello, world!");
+}
+```
 
 ---
 
