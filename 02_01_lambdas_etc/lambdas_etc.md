@@ -224,7 +224,7 @@ auto f = std::async(all_prints, v);
 ```c++
 struct my_lambda {
    int x;
-   
+
    int operator()(int y) const { return x * y; }
 }
 
@@ -243,7 +243,7 @@ auto real_lambda = [x](int y) { return x * y; };
 ```c++
 struct my_lambda {
    int& x;
-   
+
    int operator()(int y) const { return x * y; }
 }
 
@@ -263,7 +263,7 @@ auto real_lambda = [&x](int y) { return x * y; };
 struct my_lambda {
    int& x;
    int z;
-   
+
    int operator()(int y) const { return x * y * z; }
 }
 
@@ -284,7 +284,7 @@ auto real_lambda = [&, z](int y) { return x * y * z; };
 struct my_lambda {
    int& x;
    int z;
-   
+
    int operator()(int y) const { return x * y * z; }
 }
 
@@ -303,17 +303,17 @@ auto real_lambda = [=, &x](int y) { return x * y * z; };
 
 ```c++
 class my_class {
-   std::tuple<int, int> t;
+   std::tuple<int, double> t;
 
-   auto g() {
+   auto f() {
       // *this copied into lambda capture
       auto t = std::thread([*this])(){ /* ... */ });
       t.detach();
    }
 
-   auto f() {
+   auto g() {
       // this is a pointer, beware dangling pointer access!
-      auto t = std::jthread([this]() { /* ... */ });
+      auto t = std::thread([this]() { /* ... */ });
       t.detach();
    }
 };
@@ -327,16 +327,50 @@ class my_class {
 - Can capture by value and by reference also with initializers
 
 ```c++
-void g(std::tuple<int, int>&& t);
-void g(std::tuple<int, int> const& t);
+void g(std::tuple<int, double> const& t);
 
-void f(std::tuple<int, int>&& t1) {
-    std::jthread([t2 = std::move(t1)]() /* mutable */ {
-        // Beware t2 is not actually moved unless the lambda is marked mutable!
-        // t2 is const, std::move(t2) is const&&
-        g(std::move(t2));
-    })
+void f(std::tuple<int, double>&& t1) {
+    std::jthread([t2 = std::move(t1)]() {
+        g(t2);
+    });
 }
+```
+
+---
+
+# Lambdas, formally
+
+- Which overload is called below?
+* Captures are const by default
+  - `g(std::tuple<int, double> const&)` is called!
+  - https://godbolt.org/z/xs4cdYh8f
+
+```c++
+void g(std::tuple<int, double>&& t);
+void g(std::tuple<int, double> const& t);
+
+void f(std::tuple<int, double>&& t1) {
+    std::jthread([t2 = std::move(t1)]() {
+        g(std::move(t2));
+    });
+}
+```
+
+# Lambdas, formally
+
+- Call operator is const by default
+- But can be made `mutable`
+
+```c++
+struct my_lambda {
+   type x;
+
+   int operator()() /* const */ { return g(std::move(x)); }
+}
+
+type x{};
+auto emulated_lambda = my_lambda{x};
+auto real_lambda = [x = std::move(x)](int y) mutable { return g(std::move(x)); };
 ```
 
 ---
@@ -394,7 +428,7 @@ register_startup_handler(print_config); // Does not work!
 
 # `std::function` use case: API boundary with `std::function`
 
-- Not everything needs to be templated etc. for optimal performance 
+- Not everything needs to be templated etc. for optimal performance
 - A usable API may be more important
 - Example: register a function to be called at startup of a library
 - We can template, but not necessary in this case
@@ -412,7 +446,7 @@ register_startup_handler(print_config);
 
 # `std::function` use case: API boundary with `std::function`
 
-- Not everything needs to be templated etc. for optimal performance 
+- Not everything needs to be templated etc. for optimal performance
 - A usable API may be more important
 - Example: register a function to be called at startup of a library
 - `std::function`: type-erased callable wrapper
