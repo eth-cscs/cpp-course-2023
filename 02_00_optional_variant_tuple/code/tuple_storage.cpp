@@ -16,9 +16,10 @@ struct task {
 
 template <typename F, typename... Ts>
 auto make_task(F&& f, Ts&&... ts) {
-    return task<F, Ts...>(
+    return task<F, Ts...>{
         std::forward<F>(f),
-        std::tuple(std::forward<Ts>(ts)...));
+        std::tuple(std::forward<Ts>(ts)...)
+    };
 }
 
 void fill(int* array, int n, int x) {
