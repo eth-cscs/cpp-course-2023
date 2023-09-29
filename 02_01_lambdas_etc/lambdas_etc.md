@@ -341,7 +341,7 @@ void f(std::tuple<int, double>&& t1) {
 # Lambdas, formally
 
 - Which overload is called below?
-* Captures are const by default
+* Call operator is const by default
   - `g(std::tuple<int, double> const&)` is called!
   - https://godbolt.org/z/xs4cdYh8f
 
@@ -355,6 +355,8 @@ void f(std::tuple<int, double>&& t1) {
     });
 }
 ```
+
+---
 
 # Lambdas, formally
 
@@ -372,6 +374,37 @@ type x{};
 auto emulated_lambda = my_lambda{x};
 auto real_lambda = [x = std::move(x)](int y) mutable { return g(std::move(x)); };
 ```
+
+---
+
+# Capturing a pack in a lambda
+
+<div class="twocolumns">
+<div>
+
+## Since C++20:
+```c++
+template <typename... Ts>
+void f(Ts&&... ts) {
+    auto ff1 = [ts...]() {};
+    auto ff2 = [...ts = std::forward<Ts>(ts)]() {};
+}
+```
+
+</div>
+<div>
+
+## In C++17:
+```c++
+template <typename... Ts>
+void f(Ts&&... ts) {
+    auto ff1 = [t = std::tuple(ts...)]() {};
+    auto ff2 = [t = std::tuple(std::forward<Ts>(ts)...)]() {};
+}
+```
+
+<div>
+<div>
 
 ---
 
@@ -492,51 +525,93 @@ register_startup_handler(print_config);
 
 # `std::bind_front`: "hard-code" the first arguments of a function
 
+- `std::bind_front` exists since C++20
+- Does a "partial application" of the function
+- `std::bind_front` will not implicitly call the function when all arguments have been supplied (not even possible in the general case)
+- `std::bind` also exists, but prefer lambdas or `std::bind_front` whenever possible; `std::bind` has hairy corner cases that make it error-prone: https://godbolt.org/z/xPE6fa1K9
+
 ```c++
 int f(double, std::string);
+int x = 42; std::string y = "hello";
 
-int x = 42;
-std::string y = "hello";
-
-// bind_front with only a function is a no-op
+// bind_front reduces the arity of the function by the number of (non-function) arguments passed to bind_front
 std::bind_front(f)(x, y);
-
-// bind_front reduces the arity of the function by the
-// number of (non-function) arguments passed to bind_front
 std::bind_front(f, x)(y);
 std::bind_front(f, x, y)();
 ```
-
-`std::bind` also exists, but prefer lambdas or `std::bind_front` whenever
-possible; `std::bind` has hairy corner cases that make it error-prone:
-https://godbolt.org/z/xPE6fa1K9
 
 ---
 
 # `std::apply`: unpack a tuple into separate arguments
 
-- similar to unpacking with `*` in Python
+- Similar to unpacking with `*` in Python
+- Passes each element of tuple-like objects as separate arguments to the callable
 
 ```c++
-int f(double, std::string);
+int f(int, std::string);
 
 std::tuple<int, std::string> t{42, "hello"};
-std::string y = "hello";
 
+// Equivalent to f(42, "hello")
 std::apply(f, t);
+```
+
+---
+
+# `std::apply`: unpack a tuple into separate arguments
+
+- Useful together with `std::bind_front`
+
+```c++
+int f(double, int, std::string);
+
+std::tuple<int, std::string> t{42, "hello"};
+
+// Equivalent to f(3.14, 42, "hello")
+std::apply(std::bind_front(f, 3.14), t));
+```
+
+---
+# `std::apply` exercise: finish `kernel_launcher`
+
+- See exercise `tuple_storage_apply` in `02_01_lambdas`
+
+```c++
+template <typename F, typename... Ts>
+struct kernel_launcher {
+    int block_dim;
+    int grid_dim;
+
+    std::decay_t<F> f;
+    std::tuple<std::decay_t<Ts>...> t;
+
+    void operator()(cudaStream_t stream) { /* TODO */ }
+};
+```
+
+---
+
+# `std::apply` exercise: implement it
+
+- See exercise `apply` in `02_01_lambdas`
+- Example implementation: https://godbolt.org/z/6nzd1cjn6
+
+```c++
+// Equivalent to f(42, 3.14)
+std::apply(f, std::tuple(42, 3.14));
 ```
 
 ---
 
 # `std::(c)ref`: obtain a copyable (const) reference to an object
 
-- value semantics like pointers, can be rebound
-- non-nullable like references
+- Value semantics like pointers, i.e. can be rebound
+- Non-nullable like references
 - `std::(c)ref` are functions which return `std::reference_wrapper<T>`
-- can opt-in to references in places that normally don't allow references
+- Useful to opt-in to references in places that normally don't allow references
 
 ```c++
-int f(double&, std::string);
+int f(int&, std::string);
 
 int x = 42;
 std::string y = "hello";
@@ -607,11 +682,32 @@ const auto x = [&]() {
 
 ---
 
-# Enjoy your break: What does this do?
+# `overloaded` exercise: How does the following work?
+
+- See exercise `ast` in `02_00_optional_variant_tuple`
+
+```c++
+template<class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+int main() {
+    std::variant<int, std::string> v{"hi!"};
+    std::visit(overloaded([](int x) { std::cout << "variant holds " << x << '\n'; },
+                          [](std::string x) { std::cout << "variant holds " << x << '\n'; }),
+               v)
+}
+```
+
+---
+
+# Bonus: What does this do?
 
 - https://quuxplusone.github.io/blog/2018/05/17/super-elider-round-2/
 - https://akrzemi1.wordpress.com/2018/05/16/rvalues-redefined/
-- https://godbolt.org/z/5fxP3EYnn
+- https://godbolt.org/z/qh7sEePT5
 
 ```c++
 template <typename F>
@@ -622,7 +718,7 @@ class foo
 public:
     explicit foo(F&& f) : f(std::forward<F>(f)) {}
 
-    using type = decltype(std::declval<F&&>()());
+    using type = std::invoke_result_t<F&&>;
     operator type() { return std::forward<F>(f)(); }
 };
 ```
