@@ -36,8 +36,8 @@ size: 16:9
 
 - `std::tuple` for storing a compile-time known number of potentially homogeneous types
   - by far the most commonly used utility in generic programming
-- `std::variant` for storing one of a compile-time known number of potentially homogeneous types
 - `std::optional` for storing up to one type
+- `std::variant` for storing one of a compile-time known number of potentially homogeneous types
 
 ---
 
@@ -85,8 +85,13 @@ interval i{1.0, 13.5};
 
 # `std::tuple`: what is it good for?
 
-- `std::tuple<Ts...>`: great for storing packs for later use
-- TODO: Add an example use case
+- `std::tuple<Ts...>`: great for storing arguments for later use
+- Common pattern to separate:
+  - Description of work
+  - Execution of work
+- For example:
+  - Store a task for later execution on a thread pool
+  - Store a CUDA kernel for later execution with a given stream
 
 ```c++
 template <typename... Ts>
@@ -100,15 +105,71 @@ struct mytype {
 
 ---
 
+# `std::tuple`: Kernel launcher
+
+- Full CUDA example: https://godbolt.org/z/K6qrnvbc8
+
+<div class="twocolumns">
+<div>
+
+```c++
+__global__ void fill(int* array, int n, int x);
+
+int main() {
+    int* array; int n; int x;
+
+    auto k = make_kernel_launcher(
+        256, (n + 256 - 1) / 256,
+        fill,
+        array, n, x);
+
+    {
+        // Initialize stream etc.
+        cudaStream_t stream{};
+        k(stream);
+    }
+}
+```
+
+</div>
+<div>
+
+```c++
+template <typename F, typename... Ts>
+struct kernel_launcher {
+    int block_dim;
+    int grid_dim;
+
+    std::decay_t<F> f;
+    std::tuple<std::decay_t<Ts>...> t;
+
+    void operator()(cudaStream_t stream) { /* TODO */ }
+};
+
+template <typename F, typename... Ts>
+auto make_kernel_launcher(
+    int block_dim, int grid_dim, F&& f, Ts&&... ts) {
+    return kernel_launcher<F, Ts...>(
+        block_dim, grid_dim,
+        std::forward<F>(f), std::tuple(std::forward<Ts>(ts)...)
+    );
+}
+```
+
+</div>
+</div>
+
+---
+
 # `std::tuple`: constructing
 
 | `Ts...` | `auto t =` | `decltype(t)` |
 | -- | -- | -- |
 | `int, double&, mytype` | `std::tuple(ts...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::make_tuple(ts...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::tuple<std::decay_t<Ts>...>(ts...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::tuple<Ts...>(ts...)` | `std::tuple<int, &double, mytype>` |
-| `int, double&, mytype` | `std::tuple<std::remove_cvref_t<Ts>...>(ts...)` | `std::tuple<int, double, mytype>` |
-| `int, double&, mytype` | `std::forward_as_tuple(ts...)` | `std::tuple<int&, double&, mytype&>` |
+| `int, double&, mytype` | `std::forward_as_tuple(ts...)` | `std::tuple<int&&, double&, mytype&&>` |
 
 ---
 
@@ -118,40 +179,9 @@ struct mytype {
 | -- | -- | -- |
 | `int, double&, mytype` | `std::tuple(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::make_tuple(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::tuple<std::decay_t<Ts>...>(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::tuple<Ts...>(std::forward<Ts>(ts)...)` | `std::tuple<int, &double, mytype>` |
-| `int, double&, mytype` | `std::tuple<std::remove_cvref_t<Ts>...>(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::forward_as_tuple(std::forward<Ts>(ts)...)` | `std::tuple<int&&, double&, mytype&&>` |
-  
---- 
-
-# Capturing a pack in a lambda
-
-<div class="twocolumns">
-<div>
-
-## Since C++20:
-```c++
-template <typename... Ts>
-void f(Ts&&... ts) {
-    auto ff1 = [ts...]() {};
-    auto ff2 = [...ts = std::forward<Ts>(ts)]() {};
-}
-```
-
-</div>
-<div>
-
-## In C++17:
-```c++
-template <typename... Ts>
-void f(Ts&&... ts) {
-    auto ff1 = [t = std::tuple(ts...)]() {};
-    auto ff2 = [t = std::tuple(std::forward<Ts>(ts)...)]() {};
-}
-```
-
-<div>
-<div>
 
 ---
 
@@ -194,6 +224,7 @@ std::optional<int> x2 = v2.pop_back();
 # `std::optional`
 
 - Generic programming use case: storing non-default-constructible types
+- For example: value filled in asynchronously by another thread
 
 <div class="twocolumns">
 <div>
@@ -258,7 +289,8 @@ std::print("Is the first alternative active: {}\n",
 </div>
 <div>
 
-Access
+Getting
+
 ```c++
 // Access with std::get
 std::string x1 = std::get<1>(v); // ok
@@ -270,11 +302,10 @@ std::string x2 = std::get<std::string>(v); // ok
 ```
 
 Visiting
+
 ```c++
 // Or with a generic function
-void myvisitor(int) { /* got an int */ }
-void myvisitor(std::string) { /* got a string */ }
-std::visit(myvisitor, v);
+std::visit(visitor, v);
 ```
 
 </div>
@@ -284,37 +315,27 @@ std::visit(myvisitor, v);
 
 # `std::variant`
 
-- Use case: Implementing `std::optional`!
-* ```c++
-  template <typename T>
-  struct optional {
-      std::variant<std::monostate, T> v;
-  };
-  ```
-
----
-
-# `std::variant`
-
 - Use case: abstract syntax tree
-- Full example: https://godbolt.org/z/ecTE1x6h9
+- Full example: https://godbolt.org/z/dG1jb7x84
 
 ```c++
 template <typename... Ts>
-using sp = std::shared_ptr<Ts...>;
+using up = std::unique_ptr<Ts...>;
 
-struct add; struct mul; struct lit { int x; };
-using ast = std::variant<lit, sp<add>, sp<mul>>;
+struct lit; struct add; struct mul;
+using ast = std::variant<lit, up<add>, up<mul>>;
+
+struct lit { int x; };
 struct add { ast x, y; };
 struct mul { ast x, y; };
 
-int eval(ast a) {
-    std::visit(overloaded(
-        [](lit& l) { return l.x; },
-        [](sp<add>& a) { return eval(a->x) + eval(a->y); },
-        [](sp<mul>& m) { return eval(m->x) * eval(m->y); }),
-        a)
-}
+int eval(ast const&);
+struct visitor {
+    auto operator()(lit const& l) const { return l.x; }
+    auto operator()(sp<add> const& a) const { return eval(a->x) + eval(a->y); }
+    auto operator()(sp<mul> const& m) const { return eval(m->x) * eval(m->y); }
+};
+int eval(ast const& a) { return std::visit(visitor{}, a); }
 ```
 
 ---
@@ -336,42 +357,12 @@ std::variant<std::monostate, mytype, int> v;
 
 ---
 
-# Unpacking a tuple
+# `std::variant`
 
-TODO: Move to function objects etc. session?
-
-```c++
-std::tuple<int, std::string> t;
-std::apply([](auto&&... ts) {
-    // We now have access to a pack ts
-    f(tag_t{}, std::forward<decltype(ts)>(ts)..., 42);
-}, std::move(t));
-```
-
----
-
-# Bonus exercise: implement `apply`
-
-- TODO: May belong in other generic programming session
-- Example implementation: https://godbolt.org/z/7e4b7sKz5
-
----
-
-# Enjoy your break: How does the following work?
-
-TODO: Move to function objects etc. session?
-
-```c++
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
-int main() {
-    std::variant<int, std::string> v{"hi!"};
-    std::visit(overloaded([](int x) { std::cout << "variant holds " << x << '\n'; },
-                          [](std::string x) { std::cout << "variant holds " << x << '\n'; }),
-               v)
-}
-```
+- Use case: Implementing `std::optional`!
+* ```c++
+  template <typename T>
+  struct optional {
+      std::variant<std::monostate, T> v;
+  };
+  ```
