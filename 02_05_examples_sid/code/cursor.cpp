@@ -66,7 +66,7 @@ struct numbers_from {
 };
 
 template <Cursor T>
-struct take_0 {
+struct take_impl {
     T wrapped_;
     int left_;
 
@@ -82,7 +82,7 @@ struct take_0 {
 
 constexpr auto take = [](int n) {
     return [n](Cursor auto c) {
-        return take_0(std::move(c), n);
+        return take_impl(std::move(c), n);
     };
 };
 
@@ -143,7 +143,7 @@ int main() {
     dump(a_very_concrete_cursor{});
     // dump(numbers_from(5));
     std::cout << "===\n";
-    dump(take_0(numbers_from(7), 10));
+    dump(take_impl(numbers_from(7), 10));
     std::cout << "===\n";
     dump(take(10)(numbers_from(7)));
     std::cout << "===\n";
