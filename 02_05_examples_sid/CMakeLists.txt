@@ -6,3 +6,8 @@ add_executable(02_05_sid
     code/sid.cpp
 )
 target_compile_options(02_05_sid PRIVATE "-fconcepts-diagnostics-depth=10")
+
+add_executable(02_05_cursor
+    code/cursor.cpp
+)
+target_compile_options(02_05_cursor PRIVATE "-fconcepts-diagnostics-depth=10")
