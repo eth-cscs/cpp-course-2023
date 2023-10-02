@@ -1,5 +1,6 @@
 #include <array>
 #include <iostream>
+#include <string>
 #include <type_traits>
 
 struct some_cursor {
@@ -44,17 +45,34 @@ concept Cursor = std::move_constructible<T> && requires(T& t, T const& tc) {
 
 static_assert(Cursor<some_cursor>);
 
-void dump(Cursor auto c) {
+// void dump(Cursor auto c) {
+//     for (; !c.done(); c.next()) {
+//         std::cout << c.get() << std::endl;
+//     }
+// }
+
+inline constexpr auto dump = [](Cursor auto c) {
     for (; !c.done(); c.next()) {
         std::cout << c.get() << std::endl;
     }
-}
+};
 
 // ===
 
 // file cursor
 
 // ===
+
+template <std::integral T>
+struct range {
+    T start_;
+    T stop_;
+
+    T const& get() const { return start_; }
+    void next() { ++start_; };
+    bool done() const { return start_ >= stop_; }
+};
+
 
 template <std::integral T>
 struct numbers_from {
@@ -137,11 +155,32 @@ auto squared = transform([](auto a) { return a * a; });
 
 // ===
 
+template <class F>
+constexpr F&& compose(F&& f) {
+    return std::forward<F>(f);
+}
 
+template <class F, class... Gs>
+constexpr auto compose(F&& f, Gs&&... gs) {
+    return [f = std::forward<F>(f), g = compose(std::forward<Gs>(gs)...)]<class... Args>(Args&&... args) { return f(g(args...)); };
+}
+
+// ===
+
+namespace pipes {
+template <class F, class G>
+constexpr decltype(auto) operator|(F&& f, G&& g) {
+    if constexpr (std::is_invocable_v<G&&, F&&>)
+        return std::forward<G>(g)(std::forward<F>(f));
+    else
+        return compose(g, f);
+}
+} // namespace pipes
 
 int main() {
     dump(a_very_concrete_cursor{});
-    // dump(numbers_from(5));
+    std::cout << "===\n";
+    dump(range(2, 5));
     std::cout << "===\n";
     dump(take_impl(numbers_from(7), 10));
     std::cout << "===\n";
@@ -153,5 +192,21 @@ int main() {
     std::cout << "===\n";
     dump(take(10)(transform([](auto a) { return a * a; })(numbers_from(2))));
     std::cout << "===\n";
-    dump(take(10)(squared(numbers_from(2))));
+    dump(squared(take(10)(squared(numbers_from(2)))));
+
+    std::cout << "===\n";
+    auto composed = compose(squared, take(10), squared);
+    dump(composed(numbers_from(42)));
+    std::cout << "===\n";
+
+
+    using namespace pipes;
+    auto take_10_and_dump = take(10) | dump;
+    range(100, 120) | take_10_and_dump;
+
+
+    // range(2, 5) | dump;
+
+    // dump(numbers_from(42) | take(10));
+    // dump(compose(take(10), numbers_from(42)));
 }
