@@ -1,5 +1,6 @@
 #include <array>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -177,6 +178,51 @@ constexpr decltype(auto) operator|(F&& f, G&& g) {
 }
 } // namespace pipes
 
+// ===
+
+template <class T>
+class any_cursor {
+    struct iface {
+        virtual bool done() const = 0;
+        virtual void next() = 0;
+        virtual T const& get() const = 0;
+        virtual ~iface(){};
+    };
+
+    template <Cursor C>
+    struct impl : iface {
+        C cur_;
+        impl(C c) : cur_{ std::move(c) } {}
+        bool done() const {
+            return cur_.done();
+        }
+        void next() {
+            cur_.next();
+        }
+        T const& get() const {
+            return cur_.get();
+        }
+    };
+
+    std::unique_ptr<iface> impl_;
+
+public:
+    any_cursor(Cursor auto c) : impl_(new impl(std::move(c))) {}
+    bool done() const {
+        return impl_->done();
+    }
+    T const& get() const {
+        return impl_->get();
+    }
+    void next() {
+        return impl_->next();
+    }
+};
+
+void my_complicated_algorithm(any_cursor<int> c) {
+    dump(std::move(c));
+}
+
 int main() {
     dump(a_very_concrete_cursor{});
     std::cout << "===\n";
@@ -209,4 +255,8 @@ int main() {
 
     // dump(numbers_from(42) | take(10));
     // dump(compose(take(10), numbers_from(42)));
+
+    std::cout << "===\n";
+    any_cursor<int> a = { range(10, 20) };
+    my_complicated_algorithm(std::move(a));
 }
