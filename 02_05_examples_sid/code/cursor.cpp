@@ -223,6 +223,40 @@ void my_complicated_algorithm(any_cursor<int> c) {
     dump(std::move(c));
 }
 
+// ===
+
+namespace AnotherAPI {
+template <class T>
+struct NumbersFrom {
+    T value_;
+
+    T const& Get() const { return value_; }
+    void Next() { ++value_; };
+    bool Done() const { return false; }
+};
+} // namespace AnotherAPI
+
+static_assert(!Cursor<AnotherAPI::NumbersFrom<int>>); // not a cursor :(
+
+template <class C>
+struct cursor_wrapper {
+    C another_api_cur_;
+    auto get() const {
+        return another_api_cur_.Get();
+    }
+    void next() {
+        another_api_cur_.Next();
+    }
+    bool done() const {
+        return another_api_cur_.Done();
+    }
+};
+template <class T>
+using adopted_numbers_from = cursor_wrapper<AnotherAPI::NumbersFrom<T>>;
+
+static_assert(Cursor<adopted_numbers_from<int>>);
+
+
 int main() {
     dump(a_very_concrete_cursor{});
     std::cout << "===\n";
