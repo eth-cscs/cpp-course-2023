@@ -256,6 +256,75 @@ using adopted_numbers_from = cursor_wrapper<AnotherAPI::NumbersFrom<T>>;
 
 static_assert(Cursor<adopted_numbers_from<int>>);
 
+// ===
+
+namespace adl_cursor {
+auto cursor_next(auto& cur) -> decltype(cur.next()) { cur.next(); };
+auto cursor_get(auto const& cur) -> decltype(cur.get()) { return cur.get(); };
+auto cursor_done(auto const& cur) -> decltype(cur.done()) { return cur.done(); };
+
+constexpr inline auto next = [](auto& cur) -> decltype(cursor_next(cur)) { cursor_next(cur); };
+constexpr inline auto done = [](auto const& cur) -> decltype(cursor_done(cur)) { return cursor_done(cur); };
+constexpr inline auto get = [](auto const& cur) -> decltype(cursor_get(cur)) { return cursor_get(cur); };
+} // namespace adl_cursor
+
+template <class T>
+concept ADLCursor = std::move_constructible<T> && requires(T& t, T const& tc) {
+    {
+        adl_cursor::get(tc)
+    }; // -> ConstRef;
+    {
+        adl_cursor::done(tc)
+        } -> std::convertible_to<bool>;
+    { adl_cursor::next(t) };
+};
+
+
+inline constexpr auto adl_dump(ADLCursor auto cur) {
+    for (; !adl_cursor::done(cur); adl_cursor::next(cur)) {
+        std::cout << adl_cursor::get(cur) << std::endl;
+    }
+}
+
+namespace my_cursor_library {
+struct bool_pattern {
+    bool value_;
+};
+
+bool cursor_done(bool_pattern const&) {
+    return false;
+}
+bool cursor_get(bool_pattern const& bp) {
+    return bp.value_;
+}
+void cursor_next(bool_pattern& bp) {
+    bp.value_ = !bp.value_;
+}
+
+static_assert(ADLCursor<bool_pattern>);
+
+} // namespace my_cursor_library
+
+static_assert(ADLCursor<numbers_from<int>>);
+
+
+
+namespace AnotherAPI {
+template <class T>
+bool cursor_done(NumbersFrom<T> const& cur) {
+    return cur.Done();
+}
+template <class T>
+auto cursor_get(NumbersFrom<T> const& cur) {
+    return cur.Get();
+}
+template <class T>
+void cursor_next(NumbersFrom<T>& cur) {
+    cur.Next();
+}
+} // namespace AnotherAPI
+
+static_assert(ADLCursor<AnotherAPI::NumbersFrom<int>>);
 
 int main() {
     dump(a_very_concrete_cursor{});
@@ -293,4 +362,8 @@ int main() {
     std::cout << "===\n";
     any_cursor<int> a = { range(10, 20) };
     my_complicated_algorithm(std::move(a));
+    std::cout << "===\n";
+    // adl_dump(my_cursor_library::bool_pattern{ false });
+    // adl_dump(numbers_from<int>{ 5 });
+    adl_dump(AnotherAPI::NumbersFrom(5));
 }
