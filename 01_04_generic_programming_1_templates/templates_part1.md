@@ -9,43 +9,42 @@ size: 16:9
 ---
 
 # **C++ Course**
+
 ![bg cover](../slides-support/common/title-bg3.png)
 <!-- _paginate: skip  -->
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-## Templates Part I
+## Templates (Generic Programming Part I)
 
-### JB
+### John Biddiscombe / Mauro Bianco
 
---- 
+<!-- ---
 
 ## Templates Overview
 
-* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions, Structured Bindings
+* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions, Structured Bindings -->
 
---- 
+---
 
-## Functions and Classes
+## Functions and Classes (a reminder)
 
 * A function is defined as return type, name, and arguments
+  * Functions _exist_ as code that can be linked to and called/inlined
 
 ```c++
     int add(int x, int y) { return x + y; }
 
-    int main() { add(65, 35);
+    int main() { add(65, 35); }
 ```
 
 * A class is defined as a name after class (or struct)
+  * Definition contains type, data and function members
 
 ```c++
     class name1;  // by default members are private
     struct name2; //                        public 
-```
 
-* Definition contains type, data and function members
-
-```c++
     class name1 {
         // insert interesting things here ...
         int thing1;
@@ -55,13 +54,14 @@ size: 16:9
     int main() { name1 x; }
 ```
 
---- 
+---
 
-## Function templates
+## Function templates - Instantiation
 
 * A function template is not a function
-  * It needs to be *instantiated*
-  * Mental model: substitute type text to template argument
+  * It needs to be _instantiated_
+  * Substitute type text into the template argument
+  * [Trivial link](https://godbolt.org/z/n77b5MGqa)
 
 ```c++
     template <typename T>
@@ -71,23 +71,56 @@ size: 16:9
 
     int main() {
         foo<int>(65);
-        foo<char>(65);
-        foo(3.14159); // Argument Deduction
-        foo(std::string("string"));
+        foo<char>(65);  
+        foo<double>(3.14159);   
+        foo<std::string>(std::string("string")); 
     }
+```
+
+```c++
+        auto *p1 = &foo;      // No! this doesn't exist
+        auto *p2 = &foo<int>; // Yes - address of a specific instantiation 
 ```
 
 ---
 
-## Overloads
+## Regular Function Overloading - Note
+
+* Overloading functions is quite normal, regardless of templates
+* It's a form of specialization/customization of the function itself
+* Note: Functions can't be overloaded based on return type alone
+  * introduces ambiguities due to type conversions
+
+```c++
+    void function1(int x);
+    void function1(float x);
+    void function1(int x, float y, std::string z);
+    int  function1(int x) {}                        // No!
+```
+
+`error: functions that differ only in their return type cannot be overloaded`
+
+```c++
+    struct thing1 {
+        thing2 function1(int x);
+        const thing2 function1(int x) const;
+    };
+```
+
+* a const modifier on member function changes the function signature
+  * so the _change_ in return type is ok
+
+---
+
+## Template Function Overloading - Deduction
 
 * Among the options the most specialized is chosen
   * Include ADL available candidates
 
 ```c++
-    template <typename T> 
+    template <typename T>
     void foo(T x) {
-        std::cout << x << "\n";
+        std::cout << x << ", " << typeid(x).name() << "\n";
     }
     
     void foo(std::string const& x) {
@@ -95,16 +128,24 @@ size: 16:9
     }
     
     int main() {
-        foo<int>(65);
-        foo<char>(65);
-        foo(3.14159); // Argument Deduction
-        foo(std::string("string"));
+        foo<int>(65);                // explicit (int)
+        foo<char>(65);               // explicit (char)
+        foo(3.14159);                // Argument Deduction (double)
+        foo<double>(3.14159);        // explicit (double)
+        foo<double>(3);              // explicit (double - automatic type conversion)
+        foo(std::string("yay \o/")); // Argument Deduction (string)
     }
 ```
 
---- 
+`65, i` `A, c` `3.14159, d` `3.14159, d` `3, d` `ooh! a string! yay \o/`
+
+---
 
 ## Order Matters
+
+* Be careful when mixing explicit and deduced arguments
+* explicit types must appear where expected otherwise substitution fails
+* Always watch out for automatic type conversion
 
 ```c++
     template <typename T, typename U>
@@ -119,36 +160,92 @@ size: 16:9
 
 `cannot convert '"hello"' (type 'const char [6]') to type 'double'`
 
---- 
+---
+
+## Note : Automatic Type Conversion and Deduction
+
+```c++
+    struct thing1 {
+        double some_value = 1.0;
+        void set_value(double x) { some_value = x; }
+        operator bool() const { return some_value > 0.1; }
+    };
+
+    template <typename T>
+    void print_thing(const T &t) {
+        std::cout << "Overload T " << t << " (" << t.some_value << ")" << "\n";
+    }
+
+    void print_thing(bool t) {
+        std::cout << "Overload B " << std::boolalpha << t << "\n";
+    }
+
+    int main() {
+        thing1 t1{0.05};
+        print_thing(t1);
+        print_thing(static_cast<bool>(t1));
+    }
+```
+
+`Overload T 0 (0.05)` `Overload B false`
+
+* The `<<` operator picks the bool conversion, but the template doesn't (more specialized)
+
+---
 
 ## Template Argument Deduction
 
-* To instantiate a template all the arguments must be known!
-* Sometime they can be deduced
+* To instantiate a template **all the types must be known**
+* Sometimes/Usually/Often/Mostly they can be deduced
 
-```c++
-    template <typename To, typename From> 
-    To convert(From f);   
-
-    void g(double d) { 
-        int i = convert<int>(d);    // To = int,  deduced From = double
-        char c = convert<char>(d);  // To = char, deduced From = double
-        int(*ptr)(float) = convert; // To = int,  From = float
-    }
-```
+<div class="twocolumns">
+<div>
 
 ```c++
     template <typename From, typename To> 
-    To convert(From f);   
+    To convert(From f) {
+        std::cout << typeid(To).name() << " " 
+                  << typeid(From).name() << "\n";
+        return static_cast<To>(f);
+    }
 
     void g(double d) { 
-        int i = convert<double, int>(d);   // To = int,  From = double
-        char c = convert<double, char>(d); // To = int,  From = double
-        int(*ptr)(float) = convert;        // To = int,  From = float
+        // To = int,  deduced From = double
+        int i = convert<int>(d);    
+        // To = char, deduced From = double
+        char c = convert<char>(d);  
+        // deduced To = int,  deduced From = float
+        int(*ptr)(float) = convert; 
     }
 ```
 
---- 
+`i d` `c d` `i f`
+
+</div>
+<div>
+
+```c++
+    template <typename To, typename From> 
+    To convert(From f) {
+        std::cout << typeid(To).name() << " " 
+                  << typeid(From).name() << "\n";
+        return static_cast<To>(f);
+    }
+
+    void g(double d) { 
+        // To = double,  From = int
+        int i = convert<double, int>(d);   
+        // To = double, From = char
+        char c = convert<double, char>(d); 
+        // To = int,  From = float
+        int(*ptr)(float) = convert;
+        ptr(3);        
+    }
+```
+
+`d i` `d c` `i f`
+
+---
 
 # Class templates
 
@@ -158,18 +255,19 @@ size: 16:9
 
 ```c++
     template <typename T> 
-    class templ_name {
+    class thing {
         T member;
-        T operator()(T a, T b) const {…}
+        T operator()(T a, T b) const {...}
     };
 
     int main() {
-      using class_name = templ_name<int>;
-      class_name x;
+      thing<int> x;
+      thing<double> y;
     }
 ```
+* The template parameter may be used in any 
 
---- 
+---
 
 ## Partial specializations
 
@@ -196,7 +294,7 @@ size: 16:9
 
 `error: ambiguous partial specializations of 'X<float, int>'`
 
---- 
+---
 
 ## Full specialization
 
@@ -221,7 +319,7 @@ size: 16:9
     }
 ```
 
---- 
+---
 
 ## Pattern Matching
 
@@ -246,7 +344,7 @@ size: 16:9
 
 `candidate template ignored: deduced conflicting types for parameter 'T' ('int' vs. 'X<char, X<int, void>>') -> void foo(X<T,T>) {}`
 
---- 
+---
 
 ## Pattern Matching
 
@@ -272,7 +370,7 @@ size: 16:9
     }
 ```
 
---- 
+---
 
 ## Default template arguments
 
@@ -296,11 +394,9 @@ size: 16:9
 
 `A A 65`
 
---- 
+---
 
-## Default args (... on the right)
-
-* No args on the right of the Default args ___unless they can be deduced___
+## Default args go on the right ***unless they can be deduced***
 
 ```c++
     template <typename T, typename Result=char, typename Another>
@@ -311,20 +407,47 @@ size: 16:9
 
     int main() {
         // T deduced as int, Another deduced as float
-        std::cout << foo(65, 3.5) << "\n"; // Result = char
+        std::cout << foo(65, 3.5) << "\n";                    // 1 Result = char
         // but like this we explicitly state
-        std::cout << foo<int, char, float>(65, 3.5) << "\n"; // Result = char
+        std::cout << foo<int, char, float>(65, 3.5) << "\n";  // 2 Result = char
         // in this case Another is deduced as float 
-        std::cout << foo<int, float>(65, 3.5) << "\n"; // Result = float
+        std::cout << foo<int, float>(65, 3.5) << "\n";        // 3 Result = float
     }
 ```
 
-`i d A` `i f A` `i d 65`  
-* 1 The compiler knows `T` and `Another` so it is ok with defaulting `Result`
-* 2 We tell the compiler all 3
-* 3 The compiler can deduce `Another` but we forced `Result` to be float
+output : `i d A` `i f A` `i d 65`  
 
---- 
+1. The compiler knows `T` and `Another` so it is ok with defaulting `Result`
+2. We tell the compiler all 3
+3. The compiler can deduce `Another` but we forced `Result` to be float
+
+---
+
+## More on deduction, template templates
+
+```c++
+    template <typename T, template <typename> typename U, typename V>
+    void foo(T x, U<V> a) {
+        std::cout << typeid(T).name() << " " << typeid(U<V>).name() <<" ";
+    }
+
+    template <template <typename template <typename>> typename T, typename U, typename V>
+    struct my_thing {
+        std::cout << typeid(T).name() << " " << typeid(T<U<V>>).name() <<" ";
+    };
+
+    int main() {
+        std::vector<int> vec;
+
+        using tvec = std::vector<std::vector<T>>;
+        tvec vec;
+        foo(4.5, vec);
+    }
+```
+
+* Don't try to put the `V` template inside the `U` definition
+
+---
 
 ## Non type template arguments
 
@@ -347,7 +470,7 @@ size: 16:9
 
 * Be aware that `static_int<5>` and `static_int<6>` are not the same *type*
 
---- 
+---
 
 ## Default Template arguments for classes
 
@@ -442,10 +565,12 @@ int main() {
 ---
 
 ## SFINAE
+
 * Substitution Failure Is Not An Error
   * When looking for specialization some substitution may fail
     * It's the backbone of templated code
     * Without it, nothing would work (compile)
+
 ```c++
     // some generic struct that by default will use int
     template <typename T, typename U = int>
@@ -460,6 +585,7 @@ int main() {
 ---
 
 ## Specialization in Action
+
 ```c++
     template <typename T, typename U = int>
     struct X {
@@ -490,6 +616,7 @@ int main() {
 ```
 
 `Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
+
 * use specialization If `T::extra_type` matches `U`
 * [Compiler explorer link](https://godbolt.org/z/nz7n67roe)
 * [Advanced link](https://godbolt.org/z/bovaf1P8T)
@@ -522,7 +649,7 @@ int main() {
 
 * The failed version will not compile so the good version is selected - SFINAE
 
---- 
+---
 
 ## `std::enable_if` : Possible implementations
 
@@ -547,7 +674,7 @@ int main() {
 
 ---
 
-## SFINAE: `std::enable_if_t` + `std::is_same_v` (less ___cruft___)
+## SFINAE: `std::enable_if_t` + `std::is_same_v` (less _**cruft**_)
 
 ```c++  
     template <typename T, typename Enable = void>
@@ -574,6 +701,7 @@ int main() {
 ---
 
 ## SFINAE: `void_t`
+
 ```c++
     template <typename ...T>
     using void_t = void;
@@ -638,7 +766,6 @@ int main() {
 ---
 
 ## Class Template Type Deduction (C++17)
-
 
 ```c++
     template <typename T>
@@ -725,7 +852,8 @@ int main() {
 
 ## A simple example
 
-* A complex way to say 
+* A complex way to say
+
   ```asm
     movl $120, %esi
   ```
@@ -758,6 +886,7 @@ int main() {
 * A meta-function returning a type has a public ::type
 * A meta-function returning a value has a public ::value
 * Or both
+
 ```c++
            template <Arguments…>
            struct meta_function {
@@ -766,7 +895,7 @@ int main() {
            };
 ```
 
-* Type members with arbitrary names are called traits 
+* Type members with arbitrary names are called traits
 
 ---
 
@@ -814,6 +943,7 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
 * If (boolean value) then type1, else type2
 * A shorter version
+
 ```c++
     template <bool Pred, typename T1, typename T2>
     struct select_first {
@@ -853,12 +983,15 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
 * Typedefs on steroids!
   * But they are still really just typedefs
+
   * ```c++
       using integer_type = int;
       // same as
       typedef int integer_type;
     ```
+
   * But you can template them, which is really helpful
+
   ```c++
     // create an alias for a std::vector  
     template <typename T> 
@@ -867,8 +1000,10 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
     // and then later on
     my_type<double> x(100);
   ```
-  * 
+
+  *
 * Many template arguments and defaults are allowed
+
   ```c++
     // create an alias for an STL-like container (which is itself templated) 
     template <template <typename, typename> typename T, typename U,
@@ -932,6 +1067,7 @@ int main() {
     template <typename... Ts>
     class A {};
 ```
+
 ```c++
     template <typename... Ts>
     void foo(Ts... args) {  
@@ -947,27 +1083,34 @@ int main() {
 
 ## Placement of the Variadic Dots `...`
 
-* It may at first seem confusing where to put the `...` dots 
-* The dots come **after** whatever is being repeated 
-    * Multiple typenames will be  
+* It may at first seem confusing where to put the `...` dots
+* The dots come **after** whatever is being repeated
+  * Multiple typenames will be  
+
     ```c++
     template <typename... Ts>
     ```
-    * The args types `Ts` will be a list (derived from the args)  
+
+  * The args types `Ts` will be a list (derived from the args)  
+
     ```c++
     void foo(Ts... args) {}
     ```
-    * The __thing__ before the `...` will be expanded to make a list
+
+  * The **thing** before the `...` will be expanded to make a list
+
     ```c++
       pattern(args)...;
     ```
-* :) If you see ... 
+
+* :) If you see ...
+
   ```c++
     template <typename ...Ts>
     void foo(Ts ...args) {}
   ```
 
---- 
+---
 
 ## Recursion in action
 
@@ -992,6 +1135,7 @@ int main() {
 ---
 
 ## C++17 Fold Expressions
+
 * More elaborate pack-expansions (reductions on packs)
 * 4 Flavours of Fold
   * Unary Right Fold
@@ -1020,7 +1164,7 @@ int main() {
     int main()
     {
         bool b = all(true, true, true, false);
-        std::cout << "Result: " << boolalpha << b << std::endl;
+        std::cout << "Result: " << std::boolalpha << b << std::endl;
     }
 ```
 
@@ -1111,7 +1255,6 @@ int main() {
 
 * Being completely explicit
 
-
 ```c++
     template <typename Container>
     struct my_container {
@@ -1171,3 +1314,26 @@ Variant with a visitor - using `auto`
 |:-:|:-:|
 |![First Image](https://images.pexels.com/photos/585759/pexels-photo-585759.jpeg?h=128)|![Second Image](https://images.pexels.com/photos/1335115/pexels-photo-1335115.jpeg?h=128)|
 
+---
+
+# A Slide with two columns
+
+<div class="twocolumns">
+<div>
+
+## Code
+
+```c++
+void f(int x) {
+}
+```
+
+</div>
+<div>
+
+## Explanations
+
+declaration of a function f...
+
+</div>
+</div>
