@@ -47,7 +47,7 @@ add_subdirectory(02_00_optional_variant_tuple)
 add_subdirectory(02_01_lambdas_etc)
 add_subdirectory(02_03_generic_programming_part2)
 add_subdirectory(02_04_exercises)
-add_subdirectory(02_05_examples_sid)
+add_subdirectory(02_05_example_concept_based_design)
 
 add_subdirectory(03_01_data_oriented_design)
 add_subdirectory(03_02_data_access_algorithms_ranges)
