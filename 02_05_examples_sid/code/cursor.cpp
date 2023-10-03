@@ -259,6 +259,7 @@ static_assert(Cursor<adopted_numbers_from<int>>);
 // ===
 
 namespace adl_cursor {
+inline bool cursor_done(...) { return false; }
 auto cursor_next(auto& cur) -> decltype(cur.next()) { cur.next(); };
 auto cursor_get(auto const& cur) -> decltype(cur.get()) { return cur.get(); };
 auto cursor_done(auto const& cur) -> decltype(cur.done()) { return cur.done(); };
@@ -326,6 +327,27 @@ void cursor_next(NumbersFrom<T>& cur) {
 
 static_assert(ADLCursor<AnotherAPI::NumbersFrom<int>>);
 
+// ===
+// make bool_pattern nicer
+namespace my_cursor_library2 {
+class bool_pattern {
+    bool value_;
+
+public:
+    friend bool cursor_get(bool_pattern const& bp) {
+        return bp.value_;
+    }
+    friend void cursor_next(bool_pattern& bp) {
+        bp.value_ = !bp.value_;
+    }
+};
+
+
+static_assert(ADLCursor<bool_pattern>);
+
+} // namespace my_cursor_library2
+
+
 int main() {
     dump(a_very_concrete_cursor{});
     std::cout << "===\n";
@@ -365,5 +387,6 @@ int main() {
     std::cout << "===\n";
     // adl_dump(my_cursor_library::bool_pattern{ false });
     // adl_dump(numbers_from<int>{ 5 });
-    adl_dump(AnotherAPI::NumbersFrom(5));
+    // adl_dump(AnotherAPI::NumbersFrom(5));
+    adl_dump(my_cursor_library2::bool_pattern{});
 }
