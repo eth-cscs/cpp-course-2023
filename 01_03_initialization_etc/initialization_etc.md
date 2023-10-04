@@ -24,7 +24,7 @@ Alberto Invernizzi, CSCS (alberto.invernizzi@cscs.ch)
     }
 </style>
 
-![bg right:40%](./images/c++-logo.png)
+![bg right:40%](./attachments/c++-logo.png)
 
 <span>
 C++ is an object-oriented programming language that among its main selling points has
@@ -40,10 +40,21 @@ C++ is an object-oriented programming language that among its main selling point
 
 *"... and with great power comes great responsibility."*
 
-![bg left](./images/business-spiderman-working-computer-office-1359497850d.jpg)
+![bg left](./attachments/business-spiderman-working-computer-office-1359497850d.jpg)
 
 ---
-# Resource Management
+# Example: Memory
+
+Memory management is an important aspects for many application, be it for
++ for optimization reasons (e.g.reduce memory operations costs and overhead) or
++ memory limit constraints (e.g. embedded applications)
+
+This is one of the reasons why C++ is used in many industries, from Game Development to HPC, where performance and control matters.
+
+Indeed, C++ gives you all the knobs to manage the memory: when to allocate, when to deallocate, how much to allocate, ...
+
+---
+## It's not just about memory ... it's about RESOURCE!
 
 + Memory
 + File
@@ -53,6 +64,7 @@ C++ is an object-oriented programming language that among its main selling point
 + ...
 
 Full control of a resource means managing it correctly by
+
 + 🤝 initializing/acquiring it
 + 👮‍♂️ keeping it alive till needed
 + 👋 release it cleanly when not useful anymore.
@@ -60,7 +72,7 @@ Full control of a resource means managing it correctly by
 ---
 # Why should we care?
 
-![bg right:35%](./images/bender-who-cares.jpg)
+![bg right:35%](./attachments/bender-who-cares.jpg)
 
 Not managing correctly resources may end up in subtle bugs...
 
@@ -68,7 +80,7 @@ Not managing correctly resources may end up in subtle bugs...
 + in (one of) the worst cases a race-condition 💥 (**=nightmare** 😱).
 
 ---
-![bg left:40%](./images/zach-math-thinking.jpg)
+![bg left:40%](./attachments/zach-math-thinking.jpg)
 
 Managing the lifetime of a resource in an object-oriented context easily becomes difficult.
 
@@ -82,21 +94,21 @@ When the program complexity starts increasing, to ensure the correct management 
 ...and with concurrency it becomes even more difficult (**="impossible"** 🤯).
 
 ---
-# <center>FULL CONTROL != DO IT MANUALLY</center>
+# Full control does not imply hard to do!
 
 Some languages address this using **garbage collectors**, but this comes at the expense of performances and control. So, it's not a solution for C++...
 
- but having full control does not imply having to do it manually.
+...but having full control does not imply having to do it manually.
 
 The language, through the compiler, is at our disposal. We can and should leverage it at our service.
 
-Here we are going to see what tools the language offers us and which we can and should rely on to keep things under control and writing
+Here we are going to see what tools the language offers us and which we can and should rely on to keep things under control, aiming at
 
-<div align=center>
+<center>
 
 **READABLE**, **CORRECT** and **EFFICIENT** code.
 
-<div>
+</center>
 
 ---
 # RAII
@@ -124,44 +136,27 @@ It’s a higher level of control, we don’t care anymore about what happens whe
 ---
 <!-- _class: lead -->
 
-![bg 130%](./images/pointers.jpg)
+![bg 130%](./attachments/pointers.jpg)
 
 ## Use-case with pointers
 ## (Resource = Memory)
 
 ---
-# Raw Pointers
+
+<!-- _class: lead -->
+
+## Raw Pointers
 
 Every C and C++ developer had to overcome the obstacle of pointers...
 
-<div class="twocolumns">
-
-<div>
+<div style="width: 50%; margin: 0 auto;">
 
 ```cpp
-// STACK
-int value = 26;
-int *pointer_on_stack = &value;
+void foo() {
+    int value = 26;
+    int *pointer_on_stack = &value;
 
-// HEAP
-int* pointer = new int(26);
-int* pointer_array = new int[13];
-```
-
-</div>
-</div>
-
-But are they the right tool for managing resources (i.e. memory in this case)?
-
-<div class="twocolumns">
-<div>
-
-```cpp
-// TODO example where I need a buffer (being it a variable or an array),
-// I do some calculation that might return at some point (e.g. in a for-loop)
-// and it might skip the delete at the end of the function
-
-void cumulative(int n, int* vec) {
+    int* pointer = new int(26);
     int* buffer = new int[13];
 
     for (int i = 0; i < 13; ++i) {
@@ -175,56 +170,116 @@ void cumulative(int n, int* vec) {
 ```
 
 </div>
-</div>
 
 ---
-# Problem: who is responsible?
+<!-- _class: lead -->
 
-Even without looking at the documentation, it seems clear that this function "allocates" and a reasonable expectation is that on exit `T` should point to the just allocated resource.
+## But are they the right tool for managing resources?
+### (i.e. resource = memory in this case)
+
+---
+# Ambiguity: who is responsible?
+
+Even without looking at the documentation, it seems clear that this function "allocates" and a reasonable expectation is that what it returns is a pointer to a memory allocated by the function.
 
 ```cpp
 gsl_multifit_fsolver * gsl_multifit_fsolver_alloc (const gsl_multifit_fsolver_type * T, size_t n, size_t p);
 ```
 
-+ is it up to me to deallocate it?
-+ or is there any global manager in the library that on finalization will clear all requested resources?
-
-```cpp
-// TODO find a more clear TrivialPtr
-```
++ is it up to me to deallocate it and keep it alive, right?
++ should I keep it alive till when I need it?
++ or is there something else depending on it (e.g. internal to the library)?
 
 ---
-# Problem: how should it be released?
+# Problem: how should it be deallocated?
 
 How was it allocated?
-
 + new -> delete
 + new[] -> delete[]
-+ malloc -> free
 
-```cpp
-int allocate(int* vec) {
+<div class="twocolumns">
+<div>
+<cite>
 
-}
-```
+Called by **delete**-expressions to deallocate storage previously allocated <mark>**for a single object**</mark>.
+The **behavior** [...] **is undefined** unless:
++ ptr is a <mark>null pointer</mark> or
++ is a pointer previously obtained from [...] `operator new(std::size_t)` or `operator new(std::size_t, std::nothrow_t)`
+
+</cite>
+</div>
+<div>
+<cite>
+
+Called by **delete[]**-expressions to deallocate storage previously allocated <mark>**for an array of objects**</mark>.
+The **behavior** [...] **is undefined** unless:
++ ptr is a null pointer or
++ is a pointer previously obtained from [...] `operator new[](std::size_t)` or `operator new[](std::size_t, std::nothrow_t)`
+
+</cite>
+</div>
+</div>
+
+<center>
+
+(source: https://en.cppreference.com/w/cpp/memory/new/operator_delete)
+
+</center>
 
 ---
 # Problem: burden of the management
 
-+ Remember to do it
-+ Do it in the correct order (e.g. dependencies between resources)
+<div class="twocolumns">
+<div>
+
+1) Remember to do it
+it's not about being too lazy, it's more about cognitive load
+2) Do it in the correct order
+e.g. track dependencies between resources, is it deterministic?
+
+</div>
+
+<div>
 
 ```cpp
-int* ptr = new int[26];
-int
+#include <algorithm>
+#include <iostream>
+#include <random>
+
+int main() {
+    constexpr std::size_t N = 5;
+    int* buffer = new int[N];
+
+    std::mt19937 engine;
+    std::uniform_int_distribution<int> uniform_dist(1, 10);
+    std::generate(buffer, buffer + N, [&]() { return uniform_dist(engine);});
+
+    int* min_value = std::min_element(buffer, buffer + N);
+    int* max_value = std::max_element(buffer, buffer + N);
+    
+    delete[] buffer;
+
+    std::cout << *min_value << ":" << *max_value << "\n";
+}
 ```
 
+Possible output:
+
+```console
+0:12296208
+```
+
+</div>
+</div>
+
 ---
-# Problem: have you considered all execution paths?
+<!-- _class: lead -->
+
+## Have you considered all execution paths?
 
 If a function has multiple return statements, you may have to care about it multiple times...
 
-<div class="twocolumns">
+<div style="width: 50%; margin: 0 auto;">
 
 ```cpp
 bool foo(int a, int b) {
@@ -246,11 +301,12 @@ bool foo(int a, int b) {
 </div>
 
 ---
-# Problem: ... even exceptions?
+<!-- _class: lead -->
+## ... even exceptions?
 
-In case of an exception not managed, it becomes impossible to manage correctly the release...
+In case of an exception not managed, it becomes impossible to manage release correctly...
 
-<div class="twocolumns">
+<div style="width: 50%; margin: 0 auto;">
 
 ```cpp
 float foo(int a, int b) {
@@ -278,7 +334,7 @@ float foo(int a, int b) {
 ---
 <!-- _class: lead -->
 
-![bg](./images/smart-idea.jpeg)
+![bg](./attachments/smart-idea.jpeg)
 
 <div style="width: 50%; position: absolute; right: 0; margin: 3%">
 
@@ -291,11 +347,11 @@ float foo(int a, int b) {
 
 RAII binds a resource to object lifetime. Let's see what are the main handles we have on object lifetime.
 
-<div class="twocolumns">
+<div style="width: 50%; margin: 0 auto;">
 
 ```c++
 {
-    TrivialPtr a;       // c'tor is called
+    LessRawPtr a;       // c'tor is called
 
     // ...
 }                       // d'tor is called
@@ -316,18 +372,12 @@ And what happen when it goes out of scope? It gets destroyed...and the language 
 <div class="twocolumns">
 <div>
 
-```c++
-struct TrivialPtr {
-    TrivialPtr() = default;            // default c'tor
+```cpp
+struct LessRawPtr {
+    LessRawPtr() = default;
+    LessRawPtr(int* ptr) : ptr_(ptr) {}
+    ~LessRawPtr() { if (ptr_) delete ptr_; }
 
-    TrivialPtr(int* ptr) {             // custom c'tor
-        ptr_ = ptr;
-    }
-
-    ~TrivialPtr() {                    // d'tor
-        if (ptr_)
-            delete ptr_;
-    }
 private:
     int* ptr_ = nullptr;
 };
@@ -353,7 +403,7 @@ private:
 We are binding a resource with an object on the *stack*, so we are transitively giving properties of an object on the stack to a resource!
 
 ---
-# Object Lifetime in action: multipe return points
+# Object Lifetime in action: multiple return points
 
 We don't have to care anymore about multiple execution paths! 🍾
 
@@ -363,15 +413,17 @@ We don't have to care anymore about multiple execution paths! 🍾
 
 ```cpp
 void foo(int a, int b) {
-    int* memory = new int[26];
+    int* data = new int[26];
 
     if (...) {
         // ...
-        delete[] memory;
+        delete[] data;
         return ;
     }
 
-    delete[] memory;
+    // use data again
+
+    delete[] data;
 }
 ```
 
@@ -380,15 +432,16 @@ void foo(int a, int b) {
 
 ```cpp
 void foo(int a, int b) {
-    TrivialPtr memory(new int(26));
+    LessRawPtr data(new int(26));
 
     if (...) {
         // ...
         return ;
     }
+
+    // use data
 }
 ```
-
 
 </div>
 </div>
@@ -430,7 +483,7 @@ void foo(int a, int b) {
 
 ```cpp
 void foo(int a, int b) {
-    TrivialPtr memory(new int(26));    // call to c'tor
+    LessRawPtr memory(new int(26));     // call to c'tor
 
     if (...) {
         // ...
@@ -440,7 +493,7 @@ void foo(int a, int b) {
     a / b;
 
     // ... rest of code
-}                                   // call to d'tor
+}                                       // call to d'tor
 ```
 
 </div>
@@ -449,64 +502,75 @@ void foo(int a, int b) {
 In case the exception is thrown, rest of code won't be executed...but the stack unwinding ensures that all objects on the stack are destroyed, so the d'tor gets called and the resource is released cleanly! 😌
 
 ---
-# Pimp up my class
+# RAII ✅ - Ownerhsip ❓
 
-We just started our journey in class customization, where we saw that we can
+Now the lifetime of the resource is bound to the object, thanks to RAII. And what about ownership?
 
-+ C'tor
-+ D'tor
-
-but even if programming gives power and freedom, it is wise to follow hints and guidelines...
-
----
-# Rule of Three
-
-![bg right](./images/three.png)
-
-If a class requires either a:
-+ user-defined d'tor
-`~TrivialPtr()`
-+ user-defined copy c'tor
-`TrivialPtr(const TrivialPtr&)`
-+ user-defined copy assignment operator
-`TrivialPtr& operator=(const TrivialPtr&)`
-
-it almost certainly requires all three.
-
----
-# User-defined vs implicitly-defined
-
-**What if we don't define one of them?** We get an implicitly-defined one! (`= default`)
-
-**What does it do?** Well, the language cannot know aforehead how the object should behave, so it does the most simple thing:
-
-+ d'tor does nothing, i.e. empty body
-+ copy-{c'tor, assigment}, copy by value all attributes
-
-**What does it mean in our case?** `TrivialPtr` has a single attribute `ptr_`, which is a simple pointer, so it means copying the address into another object.
++ **What does it mean "ownership" for an object?**
+It means that an object has responsibility over the underlying resource, whatever it happens...
++ **What can happen to an object?**
+We can pass it around, for instance we can copy it!
++ **What happens when we copy an object?**
+From the language perspective, a new object is created...
++ **...and what should happen from the resource perspective?**
+It depends! (we'll see more soon)
 
 <center>
 
-### 🤔 How bad can it go?! 🤔
-
-🧙  RuleOfThree warned us *"...if you define one, you have to define all of them!"*.
+**Does the language provide an handle for this phases of the object life?**
 
 </center>
 
 ---
-# Object Lifetime - Copy C'tor & assignment operator
+# `T(const T&)` and `T& operator=(const T&)`
+
++ **Did we specify anything about them?** Nope.
++ **What happens?** Default behavior of the language.
+
+The language cannot know aforehead how the object should behave, so it does the most simple thing.
+It implicitly defines them (`= default`)
++ D'tor does nothing, i.e. empty body
++ Copy-{C'tor, Assigment Operator}, copy by value all attributes
+
+<div class="twocolumns">
+<div>
+
+**What does it mean in our case?** `LessRawPtr` has a single attribute `ptr_`, which is a simple pointer, so it means copying the address into another object.
+
+<center>
+
+**🤔 How bad can it go?! 🤔**
+
+</center>
+
+</div>
+<div>
+
+```cpp
+struct LessRawPtr {
+    LessRawPtr(int* ptr) : ptr_(ptr) {}
+    ~LessRawPtr() { if (ptr_) delete ptr_; }
+private:
+    int* ptr_ = nullptr;
+};
+```
+
+</div>
+</div>
+
+---
+# SPOILER-ALERT: really bad!
 
 <div class="twocolumns">
 <div>
 
 ```cpp
 {
-    TrivialPtr a(new int(26));      // c'tor
+    LessRawPtr a(new int(26));      // c'tor
     {
-        TrivialPtr b = a;           // copy-c'tor
+        LessRawPtr b = a;           // copy-c'tor
     }                               // d'tor (b)
-    TrivialPtr c;                   // default c'tor
-    c = a;                          // copy-assignment
+    LessRawPtr c = a;               // copy c'tor
 }                                   // d'tor (c and a)
 ```
 
@@ -519,17 +583,40 @@ https://godbolt.org/z/64bE4G3oW
 </div>
 
 + `a` acquires the resource
-+ in the inner block, `b` copies `a`'s resource address, because of the implicitly-defined *copy c'tor*
++ in the inner block, `b` copies `a`'s resource address, because of the default *copy c'tor*
 `a` and `b` now own "together" the same resource 💣
 + `b` goes out of scope so the resource gets released 👋
-+ `c` will do the same that `b` did i.e. copy the address of `a`'s resource, because of the implicitly-defined *copy assignment operator*
-+ ...but the resource has been already released! 💥
++ `c` will do the same that `b` did i.e. copy the address of `a`'s resource, because of the defailt *copy c'tor*
++ both `a` and `c` believe to still own the resource (even if one does not know about the other)...
++ ...but the resource has been already released!💥
+
+<center>
+
+We should probably do something different when the object is copied ... **actually there is a guideline**!
+
+</center>
 
 ---
-# What to do? Follow the *Rule Of Three*!
+# Rule of Three
+
+![bg right](./attachments/three.png)
+
+If a class requires either a:
++ user-defined d'tor
+`~LessRawPtr()`
++ user-defined copy c'tor
+`LessRawPtr(const LessRawPtr&)`
++ user-defined copy assignment operator
+`LessRawPtr& operator=(const LessRawPtr&)`
+
+it almost certainly requires all three.
+
+---
+# What to do?
 
 What *copy-{c'tor,assignment}* should do depends on how the object should behave on copy (*object semantic*).
 
+It might be:
 - clone
 should it allocate another identical and independent resource and copy its value?
 - not-copyable
@@ -537,10 +624,14 @@ should it just not being copiable at all? (`= delete`)
 - something else?
 there might be other possible behaviors
 
-Whatever you want it to do, you have to define it as the *Rule of Three* suggests. 🤓
+<center>
+
+Whatever you want it to do, you have to define it. 🤓
+
+</center>
 
 ---
-# Object Lifetime
+# Just two examples...
 
 <div class="twocolumns">
 <div>
@@ -548,23 +639,23 @@ Whatever you want it to do, you have to define it as the *Rule of Three* suggest
 Clone
 
 ```c++
-struct TrivialPtr {
+struct LessRawPtr {
     // default c'tor
-    TrivialPtr() = default;
+    LessRawPtr() = default;
     // custom c'tor
-    TrivialPtr(int* ptr) : ptr_(ptr) {}
+    LessRawPtr(int* ptr) : ptr_(ptr) {}
     // d'tor
-    ~TrivialPtr() {
+    ~LessRawPtr() {
         if (ptr_)
             delete ptr_;
     }
     // copy c'tor
-    TrivialPtr(const TrivialPtr& rhs) {
+    LessRawPtr(const LessRawPtr& rhs) {
         ptr_ = new int(*rhs.ptr_);
     }
     // copy assignment operator (copy-and-swap idiom)
-    TrivialPtr& operator=(const TrivialPtr& rhs) {
-        TrivialPtr copy = rhs;
+    LessRawPtr& operator=(const LessRawPtr& rhs) {
+        LessRawPtr copy = rhs;
         std::swap(copy.ptr_, this->ptr_);
         return *this;
     }
@@ -581,20 +672,20 @@ https://godbolt.org/z/W5vffM7fM
 Not-copyable
 
 ```c++
-struct TrivialPtr {
+struct LessRawPtr {
     // default c'tor
-    TrivialPtr() = default;
+    LessRawPtr() = default;
     // custom c'tor
-    TrivialPtr(int* ptr) : ptr_(ptr) {}
+    LessRawPtr(int* ptr) : ptr_(ptr) {}
     // d'tor
-    ~TrivialPtr() {
+    ~LessRawPtr() {
         if (ptr_)
             delete ptr_;
     }
     // copy c'tor
-    TrivialPtr(const TrivialPtr&) = delete;
+    LessRawPtr(const LessRawPtr&) = delete;
     // copy assignment
-    TrivialPtr& operator=(const TrivialPtr&) = delete;
+    LessRawPtr& operator=(const LessRawPtr&) = delete;
 private:
     int* ptr_ = nullptr;
 };
@@ -612,20 +703,20 @@ https://godbolt.org/z/cPMvPd415
 <div>
 
 ```cpp
-struct TrivialPtr {
+struct LessRawPtr {
     // default c'tor
-    TrivialPtr() = default;
+    LessRawPtr() = default;
     // custom c'tor
-    TrivialPtr(int* ptr) : ptr_(ptr) {}
+    LessRawPtr(int* ptr) : ptr_(ptr) {}
     // d'tor
-    ~TrivialPtr() {
+    ~LessRawPtr() {
         if (ptr_)
             delete ptr_;
     }
     // copy c'tor
-    TrivialPtr(const TrivialPtr& rhs) = delete;
+    LessRawPtr(const LessRawPtr& rhs) = delete;
     // copy assignment operator
-    TrivialPtr& operator=(const TrivialPtr& rhs) = delete;
+    LessRawPtr& operator=(const LessRawPtr& rhs) = delete;
 private:
     int* ptr_ = nullptr;
 };
@@ -643,12 +734,12 @@ private:
 </div>
 </div>
 
-**What do we have?** An object that represents ownership of a memory allocation and manages it. In this last implementation, it is not copyable, so the ownership of this resource is set in stone and cannot be moved or shared with any other object.
+**What do we have?** An object representing ownership of a memory allocation. This last implementation is not copyable, so the ownership of the resource is exclusive and cannot be transferred in any way.
 
 ---
 # Ownership
 
-`TrivialPtr` is really a partial implementation of a "smarter" pointer, to the extent that it cannot be really defined a smart pointer (e.g. how do I access the memory in it?!) and it would need some extensions in order to make it useful.
+`LessRawPtr` is really a partial implementation, to the extent that it cannot be really defined a pointer (e.g. how do I access the memory in it?!) and it would need some extensions in order to make it useful.
 
 But it already expresses the concept of **ownership**!
 
@@ -656,20 +747,49 @@ It is possible to differentiate mainly two types of ownership:
 - **Unique (or exclusive) ownership**
 when there is exactly one object instance managing a specific resource
 - **Shared ownership**
-when there are more objects managing the same resource.
+when there are more objects managing the same resource (not clones, but exactly the same resource).
 
 <br/>
 
 <center>
 
-## What is the type of `TrivialPtr` ownership?
+## What is the type of `LessRawPtr` ownership?
 
 </center>
 
 ---
+![bg right:60%](attachments/todolist.png)
+
+### Let's complete the implementation of the `LessRawPtr`.
+
+Let's make it useful!
+
+### ToDo
++ Specialization for T and T[]
++ Ways to access the memory
++ Decide what to do about ownership
++ ...
+
+---
+<!-- _class: lead -->
+
+Wait...if this is so useful and fantastic,
+
+It is something probably existing in every C++ codebase!
+Everyone should use it, no!?
+
+---
+<!-- _class: lead -->
+
+![bg right:60%](attachments/stone-wheel.png)
+
+The savvy uses to say
+*"don't reinvent the wheel"*
+
+---
 # STL Smart Pointers
 
-![bg left:40%](./images/c++-logo.png)
+![bg left:40%](./attachments/c++-logo.png)
 
 STL provides a fully-featured solution for **smart pointers**:
 + `std::unique_ptr<T>` = unique ownership
@@ -686,14 +806,14 @@ Which are defined in the `<memory>` header.
 
 ## `std::unique_ptr<T>`
 
-![](./images/cppref-unique_ptr.png)
+![](./attachments/cppref-unique_ptr.png)
 
 </div>
 <div>
 
 ## `std::shared_ptr<T>`
 
-![](./images/cppref-shared_ptr.png)
+![](./attachments/cppref-shared_ptr.png)
 
 </div>
 </div>
@@ -713,7 +833,7 @@ Which are defined in the `<memory>` header.
 
 <div>
 
-![](./images/shared_ptr-ctors.png)
+![](./attachments/shared_ptr-ctors.png)
 
 <cite>
 1) Constructs a shared_ptr which shares ownership of the object managed by r. If r manages no object, *this manages no object either. [...]
@@ -743,7 +863,7 @@ How can this information about usage be shared among multiple objects?
 
 They are aka **reference counted smart pointers**, which exposes their internal mechanism.
 
-![](./images/shared_ptr-machinery.png)
+![](./attachments/shared_ptr-machinery.png)
 
 In shared ownership, the management responsibility is shared among the group, and just the last object alive, is allowed to actually destroy the resource.
 
@@ -762,7 +882,7 @@ In shared ownership, the management responsibility is shared among the group, an
 
 <div class="image">
 
-![](./images/shared_ptr-cost-heap.png)
+![](./attachments/shared_ptr-cost-heap.png)
 
 </div>
 
@@ -787,7 +907,7 @@ Each time we copy the `shared_ptr`, we are working on a shared control block. Th
 
 <div class="image">
 
-![](./images/shared_ptr_cost-sync.png)
+![](./attachments/shared_ptr_cost-sync.png)
 
 </div>
 
@@ -839,27 +959,628 @@ By using them correctly, you vehiculate a very important information via your AP
 (source: [https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#S-resource](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#S-resource))
 
 ---
-# Move semantic
+<!-- _class: lead -->
 
-![bg right:35% blur:5px](./images/moving.jpeg)
+![bg 50%](attachments/whoarewe-performances.png)
 
-TODO We are happy, we can manage resources and we have some guidelines. But as C++ programmers we are interested in performances, right? Let's think about an example with vector where we don't have move-semantic, and we perform a full copy.
+---
 
-Probably worth creating a dummy object that has an expensive clone (copy-ctor), like `std::vector`, that creates a deep-copy.
+<div style='width:60%; margin: 0 auto'>
+
+<!-- https://godbolt.org/z/sd4TWGYf1 -->
+
+```cpp
+struct Dataset {
+    Dataset() {
+        std::cout << "Created dataset!" << std::endl;
+    };
+    ~Dataset() {
+        std::cout << "Deleting dataset!" << std::endl;
+    }
+    Dataset(const Dataset&) {
+        std::cout << "Copying GBs of data" << std::endl;
+    }
+    Dataset& operator=(const Dataset&) {
+        std::cout << "Copying GBs of data" << std::endl;
+        return *this;
+    }
+    void initialize() {
+        std::cout << "Initialize dataset..." << std::endl;
+    }
+};
+```
+
+The semantic of this object is:
++ Default C'tor create a dataset
++ Data inside a dataset can be "cloned" inside another one (aka "deep-copy")
+
+</div>
+
+---
+<div style='width:50%; margin: 0 auto'>
+
+```cpp
+Dataset a;
+Dataset b;
+b = a;
+```
+
+```
+Created dataset!
+Created dataset!
+Copying GBs of data
+Deleting dataset!
+Deleting dataset!
+```
+
+👍 Perfectly fine with it!
+
+Two datasets created, one copy, two datasets destroyed.
+
+✅ Nothing unexpected.
+
+</div>
+
+---
+<div style='width:50%; margin: 0 auto'>
+
+```cpp
+Dataset createDataset() {
+    Dataset x;
+    x.initialize();
+    return x;
+}
+
+Dataset b = createDataset();
+```
+
+```
+Created dataset!
+Initialize dataset...
+Deleting dataset!
+```
+
+I would have expected:
++ Two datasets created (`x` default, `b` copied)
++ Two dataset destroyed
+
+</div>
+
+<center>
+
+Wow! No copy?!?  Indeed, there is no copy: it does not call the copy-c'tor! Thanks to **copy-elision**! 
+
+### C++ IS SUPER! BEST PERFORMANCE!
+
+</center>
+
+---
+# Copy elision
+
+<cite>
+
+"Omits copy [...] **constructor**, resulting in zero-copy pass-by-value semantics." </cite>
+
+</cite>
+
+<div style='width:50%; margin: 0 auto'>
+
+```cpp
+Dataset b = createDataset();
+```
+
+</div>
+
+**Is it a copy-constructor or a copy-assignment?** The copy assignment is a member function, so it has to be applied to an existing object. But at that point the object does not exist yet, so even if it looks like an assignment, it is actually a constructor call, a copy-c'tor call!
+
+Ok, from the code we expect a copy constructor call, and copy elision explicitly refers to the constructor and not to the assignment operator...
+
+---
+<div style='width:50%; margin: 0 auto'>
+
+```cpp
+Dataset createDataset() {
+    Dataset x;
+    x.initialize();
+    return x;
+}
+Dataset b;
+b = createDataset();
+```
+
+```
+Created dataset!
+Created dataset!
+Initialize dataset...
+Copying GBs of data
+Deleting dataset!
+Deleting dataset!
+```
+
+</div>
+
+No copy-elision at the party, and performance are gone!
+
+...is it so different than before?! A temporary dataset is created and, instead of using that (as in copy-elision case), it gets copied from, just before discarding it?!
+
+<center>
+
+### C++ is stupid! Why can't it use temporary one also here?!
+
+</center>
+
+---
+
+# Why is it so stupid?!
+
+It is not stupid, it just let you decide all details!
+
+<center>
+
+### Remember: With C++ you have FULL CONTROL!
+
+</center>
+
+So here there is the plot-twist...you have control also over this specific case!
+
+**Can you spot the difference between the twos?** We were talking about a "temporary"...
+
+<div class="twocolumns">
+
+<div>
+
+<center>
+
+"deep-copy"
+
+</center>
+
+```cpp
+Dataset b;
+b = a;
+```
+</div>
+
+<div>
+
+<center>
+
+"no copy-elision"
+
+</center>
+
+```cpp
+Dataset b;
+b = createDataset();
+```
+</div>
+
+</div>
+
+**Can you see it?** The main difference is that the temporary does not have a name!
+
+<center>
+
+### Yes, C++ gives a knob also for this!
+
+</center>
+
+But, before seeing the handle, let's understand a bit better this question about temporaries...
+
+---
+# In the beginning there was just LEFT and RIGHT...
+
+Even if they are not 100% correct, these definitions are very good approximations.
+
++ `lvalue`s can stay **<mark>"tipically"</mark>** the **left** side of `=`, and `rvalues` can **<mark>"tipically"</mark>** stay on the **right**.
++ `lvalue` is **<mark>"tipically"</mark>** something with an **identity**, and `rvalue` has **<mark>"tipically"</mark>** **no identity**
+
+For them, the language offers two different kind of references that binds to them.
+
++ `&` lvalue references
++ `&&` rvalue references
+
+<center>
+An important detail:
+<cite>
+
+`&&` (rvalue reference), extend lifetime of temporaries. Also `const&` (const lvalue reference) does.
+
+</cite>
+</center>
+
+---
+# Back to our performance problem...
+
+Let's try to express our desired behavior in terms of `lvalues` and `rvalues`.
+
+<div class="twocolumns">
+
+<div>
+
+```cpp
+Dataset b;
+b = a;
+```
+</div>
+
+<div>
+
+```cpp
+Dataset b;
+b = createDataset();
+```
+</div>
+
+</div>
+
+Desiderata:
++ we don't want to steal from an `lvalue`, because it is not a temporary and someone else might still use it
++ we might want to steal from an `rvalue`, because it is a temporary and it is going to be destroyed
+
+We used the word "steal", because a temporary object can get completely emptied. In C++ it is used the word "move", from which it origins the **move-semantic**, meaning that the "ownership" of a resource can be moved from one object to another.
+
+---
+# What handles do we have?
+
+Let's give another look at references that binds to `lvalues` and `rvalues`:
+
+`lvalue` -> &
+`rvalue` -> &&
+
+Actually...
+
+<center>
+
+In the **<mark>copy c'tor</mark>** and in the **<mark>copy assignment operator</mark>** we use the `const&`, which is an `lvalue` reference...
+
+`Dataset(const Dataset&)` and `Dataset& operator=(const Dataset&)`
+
+**What if we use an rvalue reference instead of an lvalue one?**
+
+`Dataset(Dataset&&)` and `Dataset& operator=(Dataset&&)`
+
+We get a **<mark>move c'tor</mark>** and a **<mark>move assignment operator</mark>**!
+
+</center>
+
+---
+
+<div style='width:60%; margin: 0 auto'>
+
+<!-- https://godbolt.org/z/nnsK7E5nW -->
+
+```cpp
+struct Dataset {
+    Dataset() {
+        std::cout << "Created dataset!" << std::endl;
+    };
+    ~Dataset() {
+        std::cout << "Deleting dataset!" << std::endl;
+    }
+    Dataset(const Dataset&) {
+        std::cout << "Copying GBs of data" << std::endl;
+    }
+    Dataset& operator=(const Dataset&) {
+        std::cout << "Copying GBs of data" << std::endl;
+        return *this;
+    }
+    Dataset(Dataset&&) {
+        std::cout << "Stole dataset" << std::endl;
+    }
+    Dataset& operator=(Dataset&&) {
+        std::cout << "Stole dataset" << std::endl;
+        return *this;
+    }
+    void initialize() {
+        std::cout << "Initialize dataset..." << std::endl;
+    }
+};
+```
+
+Now `Dataset` is able to behave differently depending on the value category of the argument:
++ `lvalue` -> copy c'tor or copy assignment operator
++ `rvalue` -> move c'tor or move assignment operator
+
+</div>
+
+---
+
+<div style='width:50%; margin: 0 auto'>
+
+```cpp
+Dataset b;
+b = createDataset();
+```
+
+```
+Created dataset!
+Created dataset!
+Initialize dataset...
+Stole dataset
+Deleting dataset!
+Deleting dataset!
+```
+
+Now the temporary gets stolen during the assignment.
+
+<center>
+
+### Performance are back!
+
+</center>
+
+</div>
 
 ---
 # Rule of Five
-![bg right:33%](./images/five.png)
+![bg right:33%](./attachments/five.png)
 
-TODO
+<cite>
+
+Because the presence of a user-defined (or `= default` or `= delete`)
++ D'tor
++ Copy C'tor
++ Copy Assignment Operator
+
+**any class for which move semantics are desirable**, has to declare:
+</cite>
+
+1. D'tor
+2. Copy c'tor
+3. Copy assignment
+4. Move c'tor
+5. Move assignment
+
+**Unlike Rule of Three, failing to implement move semantic is not an error, but a missed optimization opportunity.**
+
+---
+# This is just a part of the story...
+
+We might want to move resources also from an `lvalue`, because we know it is going to be destroyed soon or it is not going to be used anymore.
+
+C++ gives us an handle also for this! We can make an `lvalue` appear like an `rvalue` with `std::move()`!
+
+<div style='width:50%; margin: 0 auto'>
+
+```cpp
+Dataset a;
+Dataset b;
+b = std::move(a);
+```
+
+```
+Created dataset!
+Created dataset!
+Stole dataset
+Deleting dataset!
+Deleting dataset!
+```
+
+</div>
+
+Note: When you call `std::move(a)`, after that call you cannot assume anything about `a`. It is in a *valid but unspecified state*.
+
+---
+
+# `std::move` DOES NOT move
+
+`std::move` tells that you "might move from" the object, but actually it does not move anything.
+
+The "move" of the resources is up to the function that gets the `rvalue` reference, it might also not doing anything with it or just reading from it.
+
+Indeed, `std::move` is just an unconditional cast from an lvalue reference to an rvalue reference!
+
+Actually, the implementation is something very similar to this simplified snippet
+
+<div style="width: 40%; margin: 0 auto;">
+
+```cpp
+T&& std::move(T& lvalue) {
+    return static_cast<T&&>(lvalue);
+}
+```
+
+</div>
+
+Example implementation from LLVM libc++ https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/utility/move.h
+
+---
+
+# Value categories
+
+<center>
+
+![](attachments/value-categories-00-l-vs-r.png)
+
+</center>
+
+
+---
+
+# Value categories
+
+<center>
+
+![](attachments/value-categories-01-l-vs-r-move.png)
+
+</center>
+
+---
+
+# Value categories
+
+<center>
+
+![](attachments/value-categories-02-move-semantic.png)
+
+</center>
+
+---
+
+# Value categories
+
+<center>
+
+![](attachments/value-categories-03-rvalue.png)
+
+</center>
+
+---
+
+# Value categories
+
+<center>
+
+![](attachments/value-categories-04-general.png)
+
+</center>
+
+---
+
+# Why `lvalue` vs `rvalue` is a good approximation?
+
+From https://en.cppreference.com/w/cpp/language/reference
+
+<cite>
+
+When a function's return type is lvalue reference, the function call expression becomes an lvalue expression:
+
+</cite>
+
+<div style="width:50%; margin: 0 auto;">
+
+```cpp
+#include <iostream>
+#include <string>
+ 
+char& char_number(std::string& s, std::size_t n)
+{
+    return s.at(n); // string::at() returns a reference to char
+}
+ 
+int main()
+{
+    std::string str = "Test";
+    char_number(str, 1) = 'a';
+    std::cout << str << '\n';
+}
+```
+
+```
+Tast
+```
+
+</div>
+
+---
+
+<!-- _class: lead -->
+
+### Given RuleOf3 and RuleOf5, what's the next in the sequence?
+
+A. RuleOf7
+B. RuleOf0
+C. RuleOf8
 
 ---
 # Rule of Zero
 TODO What do you see? a rabbit? a three? or a zero? There is one more additional rule.
 
-![bg left:33%](./images/zero.png)
+![bg left:33%](./attachments/zero.png)
 
 ---
-# Initialization
 
-TODO ?!
+<div class="twocolumns">
+
+<div>
+
+```cpp
+#include <memory>
+#include <zmq.h>
+
+struct ZmqContext {
+    ZmqContext(void* handle) : context(handle) {}
+    std::unique_ptr<void, zmq_ctx_destroy> context;
+};
+
+struct ZmqSocket {
+    ZmqSocket(void* handle) : socket(handle) {}
+    std::unique_ptr<void*, zmq_close> socket;
+};
+
+int main (void)
+{
+    printf ("Connecting to hello world server...\n");
+    void *context = zmq_ctx_new ();
+    void *requester = zmq_socket (context, ZMQ_REQ);
+    zmq_connect (requester, "tcp://localhost:5555");
+
+    int request_nbr;
+    for (request_nbr = 0; request_nbr != 10; request_nbr++) {
+        char buffer [10];
+        printf ("Sending Hello %d…\n", request_nbr);
+        zmq_send (requester, "Hello", 5, 0);
+        zmq_recv (requester, buffer, 10, 0);
+        printf ("Received World %d\n", request_nbr);
+    }
+    zmq_close (requester);
+    zmq_ctx_destroy (context);
+    return 0;
+}
+```
+
+</div>
+
+<div>
+
+```cpp
+#include <zmq.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
+int main (void)
+{
+    printf ("Connecting to hello world server...\n");
+    void *context = zmq_ctx_new ();
+    void *requester = zmq_socket (context, ZMQ_REQ);
+    zmq_connect (requester, "tcp://localhost:5555");
+
+    int request_nbr;
+    for (request_nbr = 0; request_nbr != 10; request_nbr++) {
+        char buffer [10];
+        printf ("Sending Hello %d…\n", request_nbr);
+        zmq_send (requester, "Hello", 5, 0);
+        zmq_recv (requester, buffer, 10, 0);
+        printf ("Received World %d\n", request_nbr);
+    }
+    zmq_close (requester);
+    zmq_ctx_destroy (context);
+    return 0;
+}
+```
+
+</div>
+</div>
+
+---
+# Conclusion/Recap
+
++ Introduction to RAII and Ownership
++ RuleOfThree
++ Smart Pointers
++ Move semantic as an optimization chance
++ Value categories
++ RuleOfFive
++ RuleOfZero
+
+---
+<!-- _class: lead -->
+
+# Q&A
+
+Thanks
+
+Alberto Invernizzi
+Research Software Engineer @ CSCS
