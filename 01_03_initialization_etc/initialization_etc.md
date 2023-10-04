@@ -1225,8 +1225,8 @@ We used the word "steal", because a temporary object can get completely emptied.
 
 Let's give another look at references that binds to `lvalues` and `rvalues`:
 
-`lvalue` -> &
-`rvalue` -> &&
+`lvalue` -> `&`
+`rvalue` -> `&&`
 
 Actually...
 
@@ -1454,9 +1454,8 @@ When a function's return type is lvalue reference, the function call expression 
 #include <iostream>
 #include <string>
  
-char& char_number(std::string& s, std::size_t n)
-{
-    return s.at(n); // string::at() returns a reference to char
+char& char_number(std::string& s, std::size_t n) {
+    return s.at(n);
 }
  
 int main()
