@@ -36,7 +36,7 @@ struct some_cursor {
 };
 ```
 
-see a full example https://godbolt.org/z/5bx7xazYa
+see a full example https://godbolt.org/z/v7xcYKzGb
 
 
 ---

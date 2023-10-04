@@ -5,4 +5,3 @@ endif()
 add_executable(02_05_cursor
     code/cursor.cpp
 )
-target_compile_options(02_05_cursor PRIVATE "-fconcepts-diagnostics-depth=10")
