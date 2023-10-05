@@ -603,6 +603,32 @@ std::apply(f, std::tuple(42, 3.14));
 
 ---
 
+# `std::apply` exercise: constructing tuples correctly
+
+- See exercise `apply_tuple_bug` in `02_01_lambdas`
+- Is the following correct in a generic context (assuming `g(std::forward<Ts>(ts)...)` is valid)?
+
+```c++
+template <typename... Ts>
+decltype(auto) f(Ts&&... ts) {
+    return std::apply(g, std::tuple(std::forward<Ts>(ts)...));
+}
+```
+
+---
+
+# `std::tuple`: constructing, with a twist
+
+| `Ts...` | `auto t =` | `decltype(t)` |
+| -- | -- | -- |
+| `std::tuple<int, double&, mytype>` | `std::tuple(ts...)` | `std::tuple<int, double&, mytype>` |
+| `std::tuple<int, double&, mytype>` | `std::make_tuple(ts...)` | `std::tuple<std::tuple<int, double&, mytype>>` |
+| `std::tuple<int, double&, mytype>` | `std::tuple<std::decay_t<Ts>...>(ts...)` | `std::tuple<std::tuple<int, double&, mytype>>` |
+| `std::tuple<int, double&, mytype>` | `std::tuple<Ts...>(ts...)` | `std::tuple<std::tuple<int, &double, mytype>>` |
+| `std::tuple<int, double&, mytype>` | `std::forward_as_tuple(ts...)` | `std::tuple<std::tuple<int, double&, mytype>&&>` |
+
+---
+
 # `std::(c)ref`: obtain a copyable (const) reference to an object
 
 - Value semantics like pointers, i.e. can be rebound

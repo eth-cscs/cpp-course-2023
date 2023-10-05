@@ -6,6 +6,10 @@ add_executable(02_01_apply
     code/apply.cpp
 )
 
+add_executable(02_01_apply_tuple_bug
+    code/apply_tuple_bug.cpp
+)
+
 add_executable(02_01_tuple_storage_apply
     code/tuple_storage_apply.cpp
 )
