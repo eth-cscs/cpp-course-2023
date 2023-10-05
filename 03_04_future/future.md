@@ -18,7 +18,7 @@ size: 16:9
 
 #### CSCS
 
---- 
+---
 
 # C++ standardization process
 
@@ -32,17 +32,36 @@ size: 16:9
   - "(Library) Evolution Working Group" evaluates how well the design fits C++ as a whole
   - "Core/Library Working Group" evaluates wording
   - Full committee vote with "National Bodies" (NB)
-- [More information](https://isocpp.org/std)
 
 </div>
 <div>
-  
+
 ![w:900](https://isocpp.org/files/img/wg21-structure-2022-12.png)
 
 </div>
 </div>
 
---- 
+---
+
+# C++ standardization process
+
+<div class="twocolumns">
+<div>
+
+- [More information](https://isocpp.org/std)
+- Draft of the standard available at https://eel.is/c++draft
+- Proposals available at https://www.open-std.org/jtc1/sc22/wg21/docs/papers/
+- https://wg21.link/P0000 takes you to the latest revision of proposal P0000
+
+</div>
+<div>
+
+![w:900](https://isocpp.org/files/img/wg21-structure-2022-12.png)
+
+</div>
+</div>
+
+---
 
 # Moving to newer standards
 
@@ -84,10 +103,7 @@ size: 16:9
 
 ```c++
 import std;
-
-auto main() -> int {
-  std::println("Hello, world!");
-}
+auto main() -> int { std::println("Hello, world!"); }
 ```
 
 ---
@@ -193,6 +209,7 @@ std::for_each(
 - Execution policies for parallelization
 - GPU support dependent on `std::execution` support for parallel algorithms
 - Targeted for C++26
+- Only covers BLAS, not LAPACK
 - Proposal: https://wg21.link/p1673
 
 ---
@@ -250,3 +267,7 @@ sender auto s = std::execution::when_all(a, b, c) |
     std::execution::then([]() { std::print("matrix-matrix multiplication done\n"); });
 std::this_thread::sync_wait(s);
 ```
+
+---
+
+# Thank you!

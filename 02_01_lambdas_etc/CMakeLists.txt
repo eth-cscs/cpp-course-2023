@@ -5,3 +5,11 @@ endif()
 add_executable(02_01_apply
     code/apply.cpp
 )
+
+add_executable(02_01_tuple_storage_apply
+    code/tuple_storage_apply.cpp
+)
+
+add_executable(02_01_lambda_capture
+    code/lambda_capture.cpp
+)

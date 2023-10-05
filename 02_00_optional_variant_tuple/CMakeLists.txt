@@ -10,3 +10,7 @@ if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSI
         code/ast.cpp
     )
 endif()
+
+add_executable(02_00_tuple_storage
+    code/tuple_storage.cpp
+)
