@@ -1,392 +1,121 @@
-#include <array>
+#include <concepts>
 #include <iostream>
-#include <memory>
-#include <string>
 #include <type_traits>
 
-struct some_cursor {
-    bool done() const;
-    int const& get() const;
-    void next();
+#if __cpp_deduction_guides < 201907L
+    #define CURSOR_NO_CTAD_AGGREGATES
+#endif
+
+// concept
+namespace cursor {
+// default done
+auto cursor_done(...) { return false; }
+
+// cursor fallback
+auto cursor_done(auto const& cur) -> decltype(cur.done()) { return cur.done(); }
+auto cursor_next(auto& cur) -> decltype(cur.next()) { cur.next(); }
+auto cursor_get(auto const& cur) -> decltype(cur.get()) { return cur.get(); }
+
+constexpr inline auto done = [](auto const& cur) -> decltype(cursor_done(cur)) {
+    return cursor_done(cur);
+};
+constexpr inline auto next = [](auto& cur) -> decltype(cursor_next(cur)) {
+    cursor_next(cur);
+};
+constexpr inline auto get = [](auto const& cur) -> decltype(cursor_get(cur)) {
+    return cursor_get(cur);
 };
 
-class a_very_concrete_cursor {
-    std::array<int, 5> data = { 1, 2, 3, 4, 5 };
-    int i = 0;
-
-public:
-    bool done() const { return i >= data.size(); }
-    int const& get() const { return data[i]; }
-    void next() {
-        ++i;
-    }
-};
-
-// void dump(auto c) {
-//     for (; !c.done(); c.next()) {
-//         std::cout << c.get() << std::endl;
-//     }
-// }
-
-// ===
-
 template <class T>
-concept ConstRef = std::is_lvalue_reference_v<T> && std::is_const_v<std::remove_reference_t<T>>;
-
-template <class T>
-concept Cursor = std::move_constructible<T> && requires(T& t, T const& tc) {
+concept Cursor =
+    std::move_constructible<T> && requires(T& cur, T const& const_cur) {
     {
-        tc.get()
-    }; // -> ConstRef;
-    {
-        tc.done()
+        done(const_cur)
         } -> std::convertible_to<bool>;
-    { t.next() };
+    get(const_cur);
+    next(cur);
 };
 
-static_assert(Cursor<some_cursor>);
+} // namespace cursor
 
-// void dump(Cursor auto c) {
-//     for (; !c.done(); c.next()) {
-//         std::cout << c.get() << std::endl;
-//     }
-// }
-
-inline constexpr auto dump = [](Cursor auto c) {
-    for (; !c.done(); c.next()) {
-        std::cout << c.get() << std::endl;
-    }
-};
-
-// ===
-
-// file cursor
-
-// ===
-
-template <std::integral T>
-struct range {
-    T start_;
-    T stop_;
-
-    T const& get() const { return start_; }
-    void next() { ++start_; };
-    bool done() const { return start_ >= stop_; }
-};
-
+// cursor and cursor algorithm implementations
+namespace cursor_library {
+using cursor::Cursor;
 
 template <std::integral T>
 struct numbers_from {
     T value_;
 
-    T const& get() const { return value_; }
-    void next() { ++value_; };
-    bool done() const { return false; }
-};
+#ifdef CURSOR_NO_CTAD_AGGREGATES
+    numbers_from(T value) : value_(value) {}
+#endif
 
-template <Cursor T>
-struct take_impl {
-    T wrapped_;
+    friend T cursor_get(numbers_from const& cur) { return cur.value_; }
+    friend void cursor_next(numbers_from& cur) { ++cur.value_; }
+};
+static_assert(Cursor<numbers_from<int>>);
+
+template <Cursor C>
+struct take_impl_ {
+    C cur_;
     int left_;
 
-    auto get() const { return wrapped_.get(); }
-    void next() {
-        wrapped_.next();
-        left_--;
+#ifdef CURSOR_NO_CTAD_AGGREGATES
+    take_impl_(C cur, int left) : cur_{ cur }, left_{ left } {}
+#endif
+
+    friend auto cursor_get(take_impl_ const& cur) -> decltype(auto) {
+        return cursor::get(cur.cur_);
     }
-    bool done() const {
-        return left_ <= 0;
+    friend void cursor_next(take_impl_& cur) {
+        --cur.left_;
+        cursor::next(cur.cur_);
     }
-};
-
-constexpr auto take = [](int n) {
-    return [n](Cursor auto c) {
-        return take_impl(std::move(c), n);
-    };
-};
-
-// ===
-
-// can we define CursorAlgorithm concept?
-
-template <Cursor T>
-struct square_impl {
-    T cur_;
-
-    auto get() const {
-        return cur_.get() * cur_.get();
-    }
-
-    void next() {
-        cur_.next();
-    }
-
-    bool done() const {
-        return cur_.done();
+    friend auto cursor_done(take_impl_ const& cur) -> decltype(auto) {
+        return cursor::done(cur.cur_) || cur.left_ <= 0;
     }
 };
 
+auto take(int n) {
+    return [n](Cursor auto cur) { return take_impl_(cur, n); };
+}
 
-template <Cursor T, class Fun>
-struct transform_impl {
-    T cur_;
+template <class Fun, Cursor C>
+struct transform_impl_ {
     Fun fun_;
+    C cur_;
 
-    auto get() const {
-        return fun_(cur_.get());
+#ifdef CURSOR_NO_CTAD_AGGREGATES
+    transform_impl_(Fun fun, C cur) : fun_{ std::move(fun) }, cur_{ std::move(cur) } {}
+#endif
+
+    friend auto cursor_get(transform_impl_ const& transf_) -> decltype(auto) {
+        return transf_.fun_(cursor::get(transf_.cur_));
     }
-
-    void next() {
-        cur_.next();
+    friend void cursor_next(transform_impl_& transf_) {
+        cursor::next(transf_.cur_);
     }
-
-    bool done() const {
-        return cur_.done();
+    friend auto cursor_done(transform_impl_ const& transf_) -> decltype(auto) {
+        return cursor::done(transf_.cur_);
     }
 };
 
-constexpr auto transform = [](auto fun) {
-    return [fun = std::move(fun)](Cursor auto c) {
-        return transform_impl(std::move(c), std::move(fun));
+auto transform(auto f) {
+    return [f = std::move(f)](Cursor auto cur) {
+        return transform_impl_(std::move(f), std::move(cur));
     };
-};
-
-auto squared = transform([](auto a) { return a * a; });
-
-
-// ===
-
-template <class F>
-constexpr F&& compose(F&& f) {
-    return std::forward<F>(f);
 }
 
-template <class F, class... Gs>
-constexpr auto compose(F&& f, Gs&&... gs) {
-    return [f = std::forward<F>(f), g = compose(std::forward<Gs>(gs)...)]<class... Args>(Args&&... args) { return f(g(args...)); };
-}
-
-// ===
-
-namespace pipes {
-template <class F, class G>
-constexpr decltype(auto) operator|(F&& f, G&& g) {
-    if constexpr (std::is_invocable_v<G&&, F&&>)
-        return std::forward<G>(g)(std::forward<F>(f));
-    else
-        return compose(g, f);
-}
-} // namespace pipes
-
-// ===
-
-template <class T>
-class any_cursor {
-    struct iface {
-        virtual bool done() const = 0;
-        virtual void next() = 0;
-        virtual T const& get() const = 0;
-        virtual ~iface(){};
-    };
-
-    template <Cursor C>
-    struct impl : iface {
-        C cur_;
-        impl(C c) : cur_{ std::move(c) } {}
-        bool done() const {
-            return cur_.done();
-        }
-        void next() {
-            cur_.next();
-        }
-        T const& get() const {
-            return cur_.get();
-        }
-    };
-
-    std::unique_ptr<iface> impl_;
-
-public:
-    any_cursor(Cursor auto c) : impl_(new impl(std::move(c))) {}
-    bool done() const {
-        return impl_->done();
-    }
-    T const& get() const {
-        return impl_->get();
-    }
-    void next() {
-        return impl_->next();
-    }
-};
-
-void my_complicated_algorithm(any_cursor<int> c) {
-    dump(std::move(c));
-}
-
-// ===
-
-namespace AnotherAPI {
-template <class T>
-struct NumbersFrom {
-    T value_;
-
-    T const& Get() const { return value_; }
-    void Next() { ++value_; };
-    bool Done() const { return false; }
-};
-} // namespace AnotherAPI
-
-static_assert(!Cursor<AnotherAPI::NumbersFrom<int>>); // not a cursor :(
-
-template <class C>
-struct cursor_wrapper {
-    C another_api_cur_;
-    auto get() const {
-        return another_api_cur_.Get();
-    }
-    void next() {
-        another_api_cur_.Next();
-    }
-    bool done() const {
-        return another_api_cur_.Done();
-    }
-};
-template <class T>
-using adopted_numbers_from = cursor_wrapper<AnotherAPI::NumbersFrom<T>>;
-
-static_assert(Cursor<adopted_numbers_from<int>>);
-
-// ===
-
-namespace adl_cursor {
-inline bool cursor_done(...) { return false; }
-auto cursor_next(auto& cur) -> decltype(cur.next()) { cur.next(); };
-auto cursor_get(auto const& cur) -> decltype(cur.get()) { return cur.get(); };
-auto cursor_done(auto const& cur) -> decltype(cur.done()) { return cur.done(); };
-
-constexpr inline auto next = [](auto& cur) -> decltype(cursor_next(cur)) { cursor_next(cur); };
-constexpr inline auto done = [](auto const& cur) -> decltype(cursor_done(cur)) { return cursor_done(cur); };
-constexpr inline auto get = [](auto const& cur) -> decltype(cursor_get(cur)) { return cursor_get(cur); };
-} // namespace adl_cursor
-
-template <class T>
-concept ADLCursor = std::move_constructible<T> && requires(T& t, T const& tc) {
-    {
-        adl_cursor::get(tc)
-    }; // -> ConstRef;
-    {
-        adl_cursor::done(tc)
-        } -> std::convertible_to<bool>;
-    { adl_cursor::next(t) };
-};
-
-
-inline constexpr auto adl_dump(ADLCursor auto cur) {
-    for (; !adl_cursor::done(cur); adl_cursor::next(cur)) {
-        std::cout << adl_cursor::get(cur) << std::endl;
+void dump(Cursor auto cur) {
+    for (; !cursor::done(cur); cursor::next(cur)) {
+        std::cout << cursor::get(cur) << std::endl;
     }
 }
 
-namespace my_cursor_library {
-struct bool_pattern {
-    bool value_;
-};
-
-bool cursor_done(bool_pattern const&) {
-    return false;
-}
-bool cursor_get(bool_pattern const& bp) {
-    return bp.value_;
-}
-void cursor_next(bool_pattern& bp) {
-    bp.value_ = !bp.value_;
-}
-
-static_assert(ADLCursor<bool_pattern>);
-
-} // namespace my_cursor_library
-
-static_assert(ADLCursor<numbers_from<int>>);
-
-
-
-namespace AnotherAPI {
-template <class T>
-bool cursor_done(NumbersFrom<T> const& cur) {
-    return cur.Done();
-}
-template <class T>
-auto cursor_get(NumbersFrom<T> const& cur) {
-    return cur.Get();
-}
-template <class T>
-void cursor_next(NumbersFrom<T>& cur) {
-    cur.Next();
-}
-} // namespace AnotherAPI
-
-static_assert(ADLCursor<AnotherAPI::NumbersFrom<int>>);
-
-// ===
-// make bool_pattern nicer
-namespace my_cursor_library2 {
-class bool_pattern {
-    bool value_;
-
-public:
-    friend bool cursor_get(bool_pattern const& bp) {
-        return bp.value_;
-    }
-    friend void cursor_next(bool_pattern& bp) {
-        bp.value_ = !bp.value_;
-    }
-};
-
-
-static_assert(ADLCursor<bool_pattern>);
-
-} // namespace my_cursor_library2
-
+} // namespace cursor_library
 
 int main() {
-    dump(a_very_concrete_cursor{});
-    std::cout << "===\n";
-    dump(range(2, 5));
-    std::cout << "===\n";
-    dump(take_impl(numbers_from(7), 10));
-    std::cout << "===\n";
-    dump(take(10)(numbers_from(7)));
-    std::cout << "===\n";
-    dump(take(10)(square_impl(numbers_from(2))));
-    std::cout << "===\n";
-    dump(take(10)(transform_impl(numbers_from(2), [](auto a) { return a * a; })));
-    std::cout << "===\n";
-    dump(take(10)(transform([](auto a) { return a * a; })(numbers_from(2))));
-    std::cout << "===\n";
-    dump(squared(take(10)(squared(numbers_from(2)))));
+    using namespace cursor_library;
 
-    std::cout << "===\n";
-    auto composed = compose(squared, take(10), squared);
-    dump(composed(numbers_from(42)));
-    std::cout << "===\n";
-
-
-    using namespace pipes;
-    auto take_10_and_dump = take(10) | dump;
-    range(100, 120) | take_10_and_dump;
-
-
-    // range(2, 5) | dump;
-
-    // dump(numbers_from(42) | take(10));
-    // dump(compose(take(10), numbers_from(42)));
-
-    std::cout << "===\n";
-    any_cursor<int> a = { range(10, 20) };
-    my_complicated_algorithm(std::move(a));
-    std::cout << "===\n";
-    // adl_dump(my_cursor_library::bool_pattern{ false });
-    // adl_dump(numbers_from<int>{ 5 });
-    // adl_dump(AnotherAPI::NumbersFrom(5));
-    adl_dump(my_cursor_library2::bool_pattern{});
+    dump(transform([](auto a) { return a * a; })(take(5)(numbers_from(5))));
 }
