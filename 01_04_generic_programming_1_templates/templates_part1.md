@@ -107,7 +107,7 @@ size: 16:9
     };
 ```
 
-* a const modifier on member function changes the function signature
+* a const modifier on member function changes the function signature (type)
   * so the _change_ in return type is ok
 
 ---
@@ -115,7 +115,7 @@ size: 16:9
 ## Template Function Overloading - Deduction
 
 * Among the options the most specialized is chosen
-  * Include ADL available candidates
+  * Introduce the term "ADL" - Argument Dependent Lookup (More later)
 
 ```c++
     template <typename T>
@@ -145,20 +145,77 @@ size: 16:9
 
 * Be careful when mixing explicit and deduced arguments
 * explicit types must appear where expected otherwise substitution fails
-* Always watch out for automatic type conversion
 
 ```c++
     template <typename T, typename U>
     void foo(T, U) {}
 
     int main() {
-        foo<std::string, double>("hello", 4.5);
-        foo<std::string>("hello", 4.5);
-        foo<double>("hello", 4.5);
+        foo<std::string, double>("hello", 4.5); // ok - string double fits
+        foo<std::string>("hello", 4.5);         // ok - string came first           
+        foo<double>("hello", 4.5);              // not ok, can't deduce "std::string" in 1st place
     }
 ```
 
 `cannot convert '"hello"' (type 'const char [6]') to type 'double'`
+
+* Deduction of types doesn't allow for arbitrary rearranging of template positions
+* Always watch out for automatic type conversions `const char [6]` -> `std::string`
+
+---
+
+## Template Argument Deduction
+
+* To instantiate a template **all the types must be known**
+* Sometimes/Usually/Often/Mostly they can be deduced
+  
+<div class="twocolumns">
+<div>
+
+```c++
+    template <typename To, typename From> 
+    To convert1(From f) {
+        std::cout << typeid(To).name() << " " 
+                  << typeid(From).name() << "\n";
+        return static_cast<To>(f);
+    }
+
+    void g1(double d) { 
+        // To = int,  deduced From = double
+        int i = convert1<int>(d);    
+        // To = char, deduced From = double
+        char c = convert1<char>(d);  
+        // deduced To = int,  deduced From = float
+        int(*ptr)(float) = convert1; 
+        ptr(d);
+    }
+```
+
+`i d` `c d` `i f` [Link to example](https://godbolt.org/z/coK4GYbcY)
+
+</div>
+<div>
+
+```c++
+    template <typename From, typename To> 
+    To convert2(From f) {
+        std::cout << typeid(To).name() << " " 
+                  << typeid(From).name() << "\n";
+        return static_cast<To>(f);
+    }
+
+    void g2(double d) { 
+        // To = int,  From = double
+        int i = convert2<double, int>(d);   
+        // To = char, From = double
+        char c = convert2<double, char>(d); 
+        // To = char,  From = float
+        int(*ptr)(float) = convert2;
+        ptr(d);        
+    }
+```
+
+`i d` `c d` `i f`
 
 ---
 
@@ -167,23 +224,19 @@ size: 16:9
 ```c++
     struct thing1 {
         double some_value = 1.0;
-        void set_value(double x) { some_value = x; }
         operator bool() const { return some_value > 0.1; }
     };
-
     template <typename T>
     void print_thing(const T &t) {
         std::cout << "Overload T " << t << " (" << t.some_value << ")" << "\n";
     }
-
     void print_thing(bool t) {
         std::cout << "Overload B " << std::boolalpha << t << "\n";
     }
-
     int main() {
         thing1 t1{0.05};
-        print_thing(t1);
-        print_thing(static_cast<bool>(t1));
+        print_thing(t1);                    // uses template - no overload for type thing1
+        print_thing(static_cast<bool>(t1)); // uses overload - specialization for bool
     }
 ```
 
@@ -193,70 +246,72 @@ size: 16:9
 
 ---
 
-## Template Argument Deduction
+## ADL #1
 
-* To instantiate a template **all the types must be known**
-* Sometimes/Usually/Often/Mostly they can be deduced
+* Which version of a function should be used when there's a choice
+  * Argument Dependent Lookup. In this case, the namespace
 
 <div class="twocolumns">
 <div>
 
 ```c++
-    template <typename From, typename To> 
-    To convert(From f) {
-        std::cout << typeid(To).name() << " " 
-                  << typeid(From).name() << "\n";
-        return static_cast<To>(f);
-    }
+namespace one {
+    struct thing1 {
+        double some_value = 1.0;
+        operator bool() const { return some_value > 0.1; }
+    };
 
-    void g(double d) { 
-        // To = int,  deduced From = double
-        int i = convert<int>(d);    
-        // To = char, deduced From = double
-        char c = convert<char>(d);  
-        // deduced To = int,  deduced From = float
-        int(*ptr)(float) = convert; 
+    template <typename T> void print_thing(const T &t) {
+        std::cout << "one Overload T " << t 
+                  << " (" << t.some_value << ")" << "\n";
     }
+}
 ```
 
-`i d` `c d` `i f`
+```c++
+int main() {
+    one::thing1 t11{0.05};     
+    two::thing1 t21{0.07};
+    print_thing(t11);          
+    print_thing(t21);
+}
+```
 
 </div>
 <div>
 
 ```c++
-    template <typename To, typename From> 
-    To convert(From f) {
-        std::cout << typeid(To).name() << " " 
-                  << typeid(From).name() << "\n";
-        return static_cast<To>(f);
-    }
+namespace two {
+    struct thing1 {
+        double some_value = 1.0;
+        operator bool() const { return some_value > 0.1; }
+    };
 
-    void g(double d) { 
-        // To = double,  From = int
-        int i = convert<double, int>(d);   
-        // To = double, From = char
-        char c = convert<double, char>(d); 
-        // To = int,  From = float
-        int(*ptr)(float) = convert;
-        ptr(3);        
+    template <typename T> void print_thing(const T &t) {
+        std::cout << "two Overload T " << t 
+                  << " (" << t.some_value << ")" << "\n";
     }
+}
 ```
 
-`d i` `d c` `i f`
+`one Overload T 0 (0.05)` `two Overload T 0 (0.07)`
+[Link to longer version](https://godbolt.org/z/1vdTbsYYz)
+
+</div>
+<div>
 
 ---
 
 # Class templates
 
 * A class template is not a class
-  * It needs to be instantiated
-  * Only then can an object of that type exist
+  * It needs to be instantiated, only then can an object of that type exist
 
 ```c++
     template <typename T> 
     class thing {
         T member;
+        std::unique_ptr<T> other;
         T operator()(T a, T b) const {...}
     };
 
@@ -265,24 +320,28 @@ size: 16:9
       thing<double> y;
     }
 ```
-* The template parameter may be used in any 
+
+* The template parameter may be used in any of the members or functions declared in the class
+  * Function return type
+  * one or more parameters used in a member function
+  * used in a typedef, or declaration of another type
 
 ---
 
-## Partial specializations
+## Partial specialization
 
-* For template functions - these are really just **OVERLOADS**
-  * The more specialized is chosen
+* As mentioned - for template functions - these are really just **overloads**
+* The more specialized version is chosen when encountered  
 
 ```c++
     template <typename T, typename U>
     struct X {};                        // 1 (Primary template)
 
     template <typename T>
-    struct X<T, int> {};                // 2 (Specialization of arg1)
+    struct X<T, int> {};                // 2 (Specialization of arg2 / U)
 
     template <typename U>
-    struct X<float, U> {};              // 3 (Specialization of arg2)
+    struct X<float, U> {};              // 3 (Specialization of arg1 / T)
 
     int main() {
         X<char,  double> a; // choose 1 
@@ -303,12 +362,12 @@ size: 16:9
     struct X {};                        // 1 (Primary template)
 
     template <typename T>
-    struct X<T, int> {};                // 2 (Specialization of arg1)
+    struct X<T, int> {};                // 2 (Specialization of arg2 / U)
 
     template <typename U>
-    struct X<float, U> {};              // 3 (Specialization of arg2)
+    struct X<float, U> {};              // 3 (Specialization of arg1 / T)
 
-    template <>
+    template <>                         // this "template <>" is important
     struct X<float, int> {};            // 4 (Full Specialization)
 
     int main() {
@@ -319,63 +378,68 @@ size: 16:9
     }
 ```
 
----
-
-## Pattern Matching
-
-```c++
-    template <typename T, typename U>
-    struct X {};              // 1
-
-    template <typename W, typename T, typename U>
-    struct X<W, X<T,U>> {};   // 2
-
-    template <typename T>
-    void foo(X<T,T>) {}       // F1
-
-    int main() {
-        X<int, X<int, float>> b;         // specialization<int, primary>
-        X<int, X<char, X<int, void>>> c; // specialization<int, primary>
-        X<double, double> a; 
-        foo(a); // ok F1
-        foo(c); // no :(
-    }
-```
-
-`candidate template ignored: deduced conflicting types for parameter 'T' ('int' vs. 'X<char, X<int, void>>') -> void foo(X<T,T>) {}`
+* Full specialization is **more** specialized, so it is picked and resolves the problem
 
 ---
 
-## Pattern Matching
+## Pattern Matching #1
 
 ```c++
     template <typename T, typename U>
-    struct X {};              // 1
+    struct X {};                          // Primary
 
     template <typename W, typename T, typename U>
-    struct X<W, X<T,U>> {};   // 2
+    struct X<W, X<T,U>> {};               // Specialization 1
 
     template <typename T>
-    void foo(X<T,T>) {}       // F1
-
-    template <typename T, typename U>
-    void foo(X<T,U>) {}       // F2
+    void foo(X<T,T>) {}                   // Function 1
 
     int main() {
-        X<int, X<int, float>> b;         // specialization<int, primary>
-        X<int, X<char, X<int, void>>> c; // specialization<int, primary>
-        X<double, double> a; 
-        foo(a); // ok F1
-        foo(c); // yay \o/ F2  
+        X<int, X<int, float>> a;          // specialization<int, primary>
+        X<int, X<char, X<int, void>>> b;  // specialization<int, primary>
+        X<double, double> c;              // primary 
+        foo(c);                           // ok calls Function 1
+        foo(b);                           // no :( does not match 
     }
 ```
+
+`candidate template ignored: deduced conflicting types for parameter 'T'`
+`('int' vs. 'X<char, X<int, void>>') -> void foo(X<T,T>) {}`
+
+---
+
+## Pattern Matching #2
+
+```c++
+    template <typename T, typename U>
+    struct X {};                          // Primary
+
+    template <typename W, typename T, typename U>
+    struct X<W, X<T,U>> {};               // Specialization 1
+
+    template <typename T>
+    void foo(X<T,T>) {}                   // Function 1
+
+    template <typename T, typename U>
+    void foo(X<T,U>) {}                   // Function 2
+
+    int main() {
+        X<int, X<int, float>> a;          // specialization<int, primary>
+        X<int, X<char, X<int, void>>> b;  // specialization<int, primary>
+        X<double, double> c; 
+        foo(c);                           // ok F1
+        foo(b);                           // yay \o/ F2  
+    }
+```
+
+* Now the `U` parameter is deduced to be the full `X<char, X<int, void>>`
 
 ---
 
 ## Default template arguments
 
-* Template argument can be defaulted
-* From C++11 this is also possible on function templates
+* Template arguments can be defaulted
+  * From C++11 this is also possible on function templates
 * Default args can only be to the right the arguments on the right **if not deduced**
 
 ```c++
@@ -384,15 +448,16 @@ size: 16:9
         return static_cast<Result>(x);
     }
 
-
     int main() {
-        std::cout << foo(65) << "\n"; 
-        std::cout << foo<int>(65) << "\n";
-        std::cout << foo<int, int>(65.3) << "\n";
+        std::cout << foo(65) << "\n";             // T deduced to be int, Result char
+        std::cout << foo<int>(65) << "\n";        // T explicitly int,    Result char
+        std::cout << foo<int, int>(65.3) << "\n"; // T and Result, both explicitly int  
     }
 ```
 
 `A A 65`
+
+* Note that because we used `static_cast<Result>(x)` the `double` **65.3** was converted to `int` without error
 
 ---
 
