@@ -246,10 +246,60 @@ size: 16:9
 
 ---
 
-## ADL #1
+## Function Lookup Based on Argument (ADL) #1 a)
 
 * Which version of a function should be used when there's a choice
-  * Argument Dependent Lookup. In this case, the namespace
+  * Argument Dependent Lookup. In this case, the argument types
+
+```c++
+struct thing1 {
+    double some_value = 1.0;
+    operator bool() const { return some_value > 0.1; }
+    friend std::ostream & operator << (std::ostream &os, const thing1 &t) { 
+        os << t.some_value; return os; 
+    }
+};
+
+int main() {  
+    thing1 t1{3.13};
+    std::cout << t1 << " " << static_cast<bool>(t1) << std::endl;
+}
+```
+
+* The call to `std::cout << t1` is essentially translated to `operator << (ostream, thing1)`
+
+---
+
+## Function Lookup Based on Argument (ADL) #1 b)
+
+* We can move the stream operator out of the struct if we want
+
+```c++
+struct thing1 {
+    double some_value = 1.0;
+    operator bool() const { return some_value > 0.1; }
+};
+
+std::ostream & operator << (std::ostream &os, const thing1 &t) { 
+    os << t.some_value; return os; 
+}
+
+int main() {
+    thing1 t1{3.13};
+    std::cout << t1 << " " << static_cast<bool>(t1) << std::endl;
+}
+```
+
+* We must drop the friend keyword, But ...
+  * what happens if we change `struct` to `class`
+  `'double thing1::some_value' is private within this context`
+  
+---
+
+## ADL - Namespace usage
+
+* The namespace of `t1`, `t2` are searched to find the right function
+  * just like when you call `std::cout << std::string('stuff')` 
 
 <div class="twocolumns">
 <div>
@@ -270,10 +320,10 @@ namespace one {
 
 ```c++
 int main() {
-    one::thing1 t11{0.05};     
-    two::thing1 t21{0.07};
-    print_thing(t11);          
-    print_thing(t21);
+    one::thing1 t1{0.05};     
+    two::thing1 t2{0.07};
+    print_thing(t1);          
+    print_thing(t2);
 }
 ```
 
@@ -295,7 +345,7 @@ namespace two {
 ```
 
 `one Overload T 0 (0.05)` `two Overload T 0 (0.07)`
-[Link to longer version](https://godbolt.org/z/1vdTbsYYz)
+[Link to longer (qualified) version](https://godbolt.org/z/1vdTbsYYz)
 
 </div>
 <div>
@@ -471,12 +521,12 @@ namespace two {
     }
 
     int main() {
-        // T deduced as int, Another deduced as float
+        // T deduced as int, Another deduced as double
         std::cout << foo(65, 3.5) << "\n";                    // 1 Result = char
         // but like this we explicitly state
         std::cout << foo<int, char, float>(65, 3.5) << "\n";  // 2 Result = char
-        // in this case Another is deduced as float 
-        std::cout << foo<int, float>(65, 3.5) << "\n";        // 3 Result = float
+        // in this case Another is deduced as double 
+        std::cout << foo<int, float>(65, 3.5) << "\n";        // 3 Result = float (careful)
     }
 ```
 
@@ -488,29 +538,32 @@ output : `i d A` `i f A` `i d 65`
 
 ---
 
-## More on deduction, template templates
+## Template Templates : More on deduction
+
+* Don't try to put the `V` template inside the `U` definition
 
 ```c++
     template <typename T, template <typename> typename U, typename V>
     void foo(T x, U<V> a) {
-        std::cout << typeid(T).name() << " " << typeid(U<V>).name() <<" ";
+        std::cout << "1 " << typeid(T).name() << " " << typeid(U<V>).name() <<"\n";
     }
-
-    template <template <typename template <typename>> typename T, typename U, typename V>
-    struct my_thing {
-        std::cout << typeid(T).name() << " " << typeid(T<U<V>>).name() <<" ";
-    };
-
+    
+    template <typename T, template <typename> typename U>
+    void foo(T x, U<T> a) {
+      std::cout << "2 " << typeid(T).name() << " " << typeid(U<T>).name() <<"\n";
+    }
+    
     int main() {
-        std::vector<int> vec;
+        std::vector<double> vect;
+        std::list<float> vecl;
 
-        using tvec = std::vector<std::vector<T>>;
-        tvec vec;
-        foo(4.5, vec);
+        foo(4.5, vect);
+        foo(4.5, vecl);
     }
 ```
 
-* Don't try to put the `V` template inside the `U` definition
+`2 d St6vectorIdSaIdEE` `1 d NSt7__cxx114listIfSaIfEEE`
+[Link to example](https://godbolt.org/z/j7ThG5fqa)
 
 ---
 
@@ -559,12 +612,19 @@ output : `i d A` `i f A` `i d 65`
     }
 ```
 
+* Constructions like `std::array<char, Size>` are very useful for things like
+  * message buffers/headers
+  * cache line padding
+  * Small buffer Optimization
+
 ---
 
 ## Evaluation order
 
 * Template arguments are evaluated left to right
-* So we can get things from the first and use them in the second, third ...
+  * So we can extract types from the first and use them in the second, etc ...
+* C++ gets interesting and powerful when you allow types to expose other types
+  * or (other) embedded types that have been specialized ... [link](https://godbolt.org/z/6TYzWbxhd)
 
 ```c++
     template <typename T, typename U = typename T::type, int X = U::value>
@@ -575,9 +635,16 @@ output : `i d A` `i f A` `i d 65`
         static const int value = 100;
     };
 
-    int main() {
+    struct B2 {
+        struct C {
+            static const int value = 42;
+        };
+        using type = B2::C;
+    };
 
+    int main() {
         Order<B> x;
+        Order<B2> y;
     }
 ```
 
@@ -598,10 +665,11 @@ output : `i d A` `i f A` `i d 65`
     };
 
     int main() {
-
         Order<B> x;
     }
 ```
+`error: 'U' has not been declared`
+`error: template argument 2 is invalid`
 
 ---
 
