@@ -36,6 +36,20 @@ concept Cursor =
     next(cur);
 };
 
+namespace pipes {
+    template <class F, class G>
+    constexpr auto operator|(F&& f, G&& g) -> decltype(auto) {
+        if constexpr (std::is_invocable_v<G&&, F&&>) {
+            return g(f);
+        }
+        else {
+            return [g = std::forward<G>(g), f = std::forward<F>(f)](auto&&... args) {
+                return g(f(std::forward<decltype(args)...>(args...)));
+            };
+        }
+    }
+}; // namespace pipes
+
 } // namespace cursor
 
 // cursor and cursor algorithm implementations
@@ -61,7 +75,8 @@ struct take_impl_ {
     int left_;
 
 #ifdef CURSOR_NO_CTAD_AGGREGATES
-    take_impl_(C cur, int left) : cur_{ cur }, left_{ left } {}
+    template <Cursor T>
+    take_impl_(T&& cur, int left) : cur_{ std::forward<T>(cur) }, left_{ left } {}
 #endif
 
     friend auto cursor_get(take_impl_ const& cur) -> decltype(auto) {
@@ -76,9 +91,9 @@ struct take_impl_ {
     }
 };
 
-auto take(int n) {
-    return [n](Cursor auto cur) { return take_impl_(cur, n); };
-}
+constexpr inline auto take = [](int n) {
+    return [n](Cursor auto&& cur) { return take_impl_<decltype(cur)>(std::forward<decltype(cur)>(cur), n); };
+};
 
 template <class Fun, Cursor C>
 struct transform_impl_ {
@@ -86,7 +101,8 @@ struct transform_impl_ {
     C cur_;
 
 #ifdef CURSOR_NO_CTAD_AGGREGATES
-    transform_impl_(Fun fun, C cur) : fun_{ std::move(fun) }, cur_{ std::move(cur) } {}
+    template <Cursor T>
+    transform_impl_(Fun fun, T&& cur) : fun_{ std::move(fun) }, cur_{ std::forward<T>(cur) } {}
 #endif
 
     friend auto cursor_get(transform_impl_ const& transf_) -> decltype(auto) {
@@ -100,22 +116,37 @@ struct transform_impl_ {
     }
 };
 
-auto transform(auto f) {
-    return [f = std::move(f)](Cursor auto cur) {
-        return transform_impl_(std::move(f), std::move(cur));
+constexpr inline auto transform = [](auto f) {
+    return [f = std::move(f)](Cursor auto&& cur) {
+        return transform_impl_<decltype(f), decltype(cur)>(std::move(f), std::forward<decltype(cur)>(cur));
     };
-}
+};
 
-void dump(Cursor auto cur) {
+constexpr inline auto squared = transform([](auto a) { return a * a; });
+
+constexpr inline auto dump = [](Cursor auto cur) {
     for (; !cursor::done(cur); cursor::next(cur)) {
         std::cout << cursor::get(cur) << std::endl;
     }
-}
+};
 
 } // namespace cursor_library
 
 int main() {
     using namespace cursor_library;
 
-    dump(transform([](auto a) { return a * a; })(take(5)(numbers_from(5))));
+    // dump(transform([](auto a) { return a * a; })(take(5)(numbers_from(5))));
+
+    using namespace cursor::pipes;
+    // numbers_from(5) | take(5) | dump;
+    constexpr auto take_and_dump = take(5) | dump;
+    numbers_from(-5) | take_and_dump;
+    auto n = numbers_from(0);
+    // n | take(5);
+    // dump(take(5)(n));
+    // _and_dump;
+    n | take_and_dump;
+    n | squared | take_and_dump;
+    constexpr auto square_and_dump = squared | dump;
+    // square_and_dump(n);
 }
