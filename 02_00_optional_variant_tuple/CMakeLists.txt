@@ -14,3 +14,7 @@ endif()
 add_executable(02_00_tuple_storage
     code/tuple_storage.cpp
 )
+
+add_executable(02_00_empty_variant_optional
+    code/empty_variant_optional.cpp
+)
