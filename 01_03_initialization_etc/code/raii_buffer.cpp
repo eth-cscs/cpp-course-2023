@@ -41,7 +41,7 @@ public:
 
     // Copy construction is disabled thanks to unique_ptr having a deleted copy constructor
     buffer(buffer const&) = default;
-    // Copy assignment is delteed thanks to unique_ptr having a deleted copy assignment operator
+    // Copy assignment is deleted thanks to unique_ptr having a deleted copy assignment operator
     buffer& operator=(buffer const&) = default;
 
     // Destructor will release the buffer, if p contains one
