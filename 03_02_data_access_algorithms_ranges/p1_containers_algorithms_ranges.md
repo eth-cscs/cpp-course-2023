@@ -14,29 +14,28 @@ size: 16:9
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-#### Peter Kardos
+#### Péter Kardos
 
 --- 
 
-# C++ containers
+# Standard containers
 
-- You must've heard about `std::vector`, `std::map`, or `std::list`
-- The C++ standard library provides generic implementations of the most common data structures
+- Examples: `std::vector`, `std::map`, or `std::list`
+- C++ standard library: generic implementation of common data structures
 - Philosophy:
-    - The C++ standard specifies the properties of each container
-        - For example insertion has O(log(n)) time complexity
-    - Standard libraries can choose any data structure to implement the container, as long as it satisfies the specification
-        - For example, `std::map` may be a red-black tree or an AVL tree
-        - Or `std::unordered_map` can use any hashing policy
+    - The standard specifies the properties of containers
+        - Example: search in O(log(n))
+    - The standard implementation can choose any data structure for the container
+    - As long as it satisfies said properties
+        - Example: `std::map` may be a red-black tree or an AVL tree
 - Practical use:
-    - Don't implement your own data structures, C++ covers 99% of your cases
-    - Be aware of the remaining 1% of cases
-        - C++ containers are designed to be good enough most often
-        - Your application may benefit from a specialized container (e.g. Google's dense hash)
+    - The standard library covers most cases => Don't implement data structures yourself
+    - The standard library aims to be good enough most often => You may be faster in special cases
+        - Example: Google's dense hash vs sparse hash vs std::unordered_map
 
 ---
 
-# The list of all containers
+# Containers in the standard library
 
 <div class="twocolumns">
 <div>
@@ -79,9 +78,10 @@ size: 16:9
 
 # Lesson #1: always use containers (1)
 
-**Problem:** you need an array of increasing numbers.
+**Problem:**
+- Create an array of increasing numbers.
 
-**Solution (a bad one):**
+**Bad solution:**
 
 ```c++
 int* const numbers = new int[500];
@@ -90,14 +90,13 @@ for (int i = 0; i < 100; ++i) {
 }
 ```
 
-Oops, you **forgot the delete**!
-You also **forgot to change the size of the loop** at some affected places.
+**This code has bugs. Can you tell me what?**
 
 ---
 
 # Lesson #1: always use containers (2)
 
-**Better solution:**
+**Another solution:**
 
 ```c++
 const int count = 500;
@@ -107,15 +106,17 @@ for (int i = 0; i < count; ++i) {
 }
 ```
 
-Okay, it's not leaking anymore, and we also fixed the size issue.
-
-But can we do better?
+**Breakdown:**
+- No more leaks
+- No more underflow/overflow
+- Complicated syntax
+- Cannot resize array
 
 ---
 
 # Lesson #1: always use containers (3)
 
-**Good solution:**
+**Proper solution:**
 
 ```c++
 std::vector<int> numbers(500);
@@ -124,31 +125,30 @@ for (int i = 0; i < numbers.size(); ++i) {
 }
 ```
 
-Why use containers even for simple things:
-- They manage memory for you, and make sure it doesn't leak
-- They have all the information about your data in one place
-- They provide easy access to and manipulation of your data
-    - How are you gonna resize your array allocated with `new`?
-    - Just use `std::vector::resize` instead
-- The risk of you making an error is much smaller
+**Why use containers:**
+- They don't leak memory
+- Easy access to data (e.g. `operator[]`)
+- Easy modification of data (e.g. `resize()`)
+- Improved exception safety (strong exception safety)
+- Meaningful and consistent syntax
 
 ---
 
-# Iterators (1)
+# Iterators: basic usage
 
-So say we have a `vector` of numbers:
+Let's have a `std::vector` of numbers:
 ```c++
 std::vector<int> numbers(500);
 ```
 
-You can iterate through it by indexing:
+Iterating over the elements by **indexing**:
 ```c++
 for (int i = 0; i < numbers.size(); ++i) {
     numbers[i] *= 2;
 }
 ```
 
-But you can also do it via *iterators*:
+Iterating over the elements by **iterators**:
 ```c++
 for (auto it = numbers.begin(); it != numbers.end(); ++it) {
     *it *= 2;
@@ -157,47 +157,57 @@ for (auto it = numbers.begin(); it != numbers.end(); ++it) {
 
 ---
 
-# Iterator concept (2)
+# Iterators: definition
 
-- Iterators are generalized pointers
-    - They point to one element of a *range*
-    - You can dereference them with * or []
-    - You can increment or decrement them, or do arithmetic
-- Containers make their elements availabel as a *range*
-    - An iterator to the first element is obtained by `c.begin()`
-    - An iterator to the last element is obtained by `c.end()`
-- They are a uniform interface accross containers
-    - This helps with generic programming (e.g. iterating over a list, deque or vector is the exact same syntax)
-
+- A **range** is a generalized memory block
+    - It has a beginning
+    - It has an end
+    - It contains a sequence of objects (<-> sequence of bytes)
+- An **iterator** is a generalized pointer
+    - Points to an object within a range (<-> pointer)
+    - You can dereference it to get the object (`operator*`)
+    - You can get the iterator to the next object in the range (`operator++`)
+- Uniform interface across containers & algorithms:
+    - Each container is a range
+    - Delimited by the `begin()` and `end()` iterators
+    - Same syntax for iterating over a container
 
 ---
 
-# Iterators vs. pointers (3)
+# Iterators vs. pointers
 
 **Performance**:
-- Zero-overhead: when compiled, iterators often optimize out to the same machine code as the equivalent pointer arithmetic
+- Iterators often compile to the same machine code as pointers
+- Zero overhead in most cases
 
 **Safety**:
-- In debug builds, iterators are often checked
-    - Mixing iterators of different containers is caught at runtime
-    - Out of range iterators are caught at runtime
+- Checked iterators
+    - Enabled in debug builds on some compilers
+    - Assertion error on out of range accesses
+    - Assertion error on misuse (e.g. mixing iterators of different instances)
+
+**Abstraction**:
+- Not restricted to linear memory (e.g. can iterate over trees, lists)
 
 ---
 
-# Allocators (1)
+# Memory allocation
 
-**Multiple options for memory allocations**:
+**Several options**:
 - `malloc` & `free`
 - `operator new` & `operator delete`
-- Customized allocators: Hoard, tcmalloc, etc.
+- Custom allocators: Hoard, tcmalloc, jemalloc
+- Implementing your own
 
-**Question:** which one does `std::vector::resize` use to allocate memory?
+**Question:**
+- Which one does `std::vector::resize()` use to allocate memory?
 
 ---
 
-# Allocators (2)
+# Standard allocators
 
-You can customize how containers allocate memory via a template argument, for example, look at the declaration of `std::vector`:
+- A template parameter control memory allocation of containers
+- Example: the declaration of the `std::vector` class:
 
 ```c++
 template<
@@ -206,93 +216,116 @@ template<
 > class vector;
 ```
 
-- By default, `std::allocator` is used, which uses `operator new/operator delete` under the hood
-- You can also write your own allocator that uses custom routines
+- Note the template parameter `Allocator`
+- By default, `std::allocator<T>` is used
+- That uses `operator new/operator delete` under the hood
+- You can also write your own allocator
+    - You can make it use Hoard or tcmalloc
 
 ---
 
-# Allocators: polymorphic memory resources (PMR) (3)
+# Polymorphic memory resources (PMR) (1)
 
-C++17 PMR consists of 3 main parts:
-- `std::pmr::memory_resource`
-    - A polymorphic base class for memory resources
-    - Standard memory resources include: memory pool, single-threaded pool, stack allocator
-    - You can write your own by extending `memory_resource`
-- `std::pmr::polymorphic_allocator`
-    - Models the allocator concept, just like the previously mentioned `std::allocator`
-    - Internally, uses a `memory_resource` to acquire & release memory
-- `std::pmr::vector`:
-    - Typedef for `std::vector<T, std::pmr::polymorphic_allocator<T>>`
-    - Not just vector, all containers, and strings
+**Problem with allocators:**
 
----
+```c++
+void my_fun(const std::vector<int, my_allocator<int>>& values);
+...
+std::vector<int> values;
+my_fun(values); // Does not work
+```
 
-# Allocators: polymorphic memory resources (PMR) (4)
-
-<div class="twocolumns">
-<div>
-
-**Classic template parameter:**
-
-- Specify the allocator as a template argument of the container class
-- Callee must have an interface that accepts different classes (i.e. templated)
-- Customize memory allocation by implementing the allocator concept in a new class
-- Memory allocation is fully inlined
-
-</div>
-<div>
-
-**Polymorphic allocators:**
-
-- Specify the allocator as a runtime argument of the container instance
-- Callee must accept the PMR version of the container
-- Customize memory allocation by extending the `memory_resource` class
-    - Note the already existing implementation of `memory_resource`!
-- Memory allocation requires a virtual function call
-
-</div>
-</div>
+- I've forced all users of `my_fun` to use `my_allocator` too
+    - Even if they hate it
 
 ---
 
-# Allocators: polymorphic memory resources (PMR) (5)
+# Polymorphic memory resources (PMR) (2)
 
-**Summary:**
-- PMR results in much cleaner interfaces
-- Mixing PMR and traditional allocators is not practical
-    - Either use PMR consistently, or don't use PMR at all
-- Prefer PMR over traditional allocators when memory allocations are critical
-- Don't drop containers and start using malloc/free with raw pointers, just use PMR
+**Solution:**
+
+```c++
+void my_fun(const std::vector<int, std::pmr::polymorphic_allocator<int>>& values);
+...
+std::vector<int, std::pmr::polymorphic_allocator<int>> values(
+    std::pmr::polymorphic_allocator{their_resource}
+);
+my_fun(values); // Work fine, uses caller's memory allocator
+```
+
+- Use `polymorphic_allocator` everywhere
+- The `polymorphic_allocator` delegates actual allocation to a `memory_resource`
+- `memory_resource` is a base class -> you can implement it differently
+- Callers of `my_fun` can now make `my_fun` use their allocators
 
 ---
 
-# C++ algorithms
+# Polymorphic memory resources (PMR) (3)
 
-- You must've heard about `std::sort`
-- The C++ standard library provides generic implementations of many common algorithms too
-- The algorithms work on *ranges* of iterators:
-    - For example, the `begin()` and `end()` iterators of you container form a range together
-    - The underlying container doesn't matter, you can run the algorithms on any range
+- Memory resource:
+    - Realized by the base class `std::pmr::memory_resource`
+    - Implemented by derived classes:
+        - `synchronized_pool_resource` (thread-safe pool)
+        - `unsynchronized_pool_resource` (single-threaded pool)
+        - `monotonic_buffer_resource` (stack allocator)
+- Polymorphic allocator:
+    - Realized by the class `std::pmr::polymorphic_allocator`
+    - You can supply a `std::memory_resource` at construction
+- Containers using polymorphic allocator by default:
+    - `std::pmr::vector<T>`, `std::pmr::map<K, V>`, etc.
+    - You can supply a `polymorphic_allocator` at construction
+
+---
+
+# Allocators vs polymorphic memory resources
+
+**When to use PMR?** 
+- Prefer PMR over traditional allocator templates -> cleaner code
+
+**Overhead of PMR?**
+- PMR uses virtual function calls to allocate memory
+- Usual allocators may be fully inlined
+- This overhead is typically negligible
+
+**Special cases: HPC, embedded:**
+- Don't stop using containers
+- You can use PMR to customize their memory behavior to suit your needs
+    - At least in most cases
+- Use non-owning containers like `std::span` and `std::string_view`
+
+---
+
+# Standard algorithms
+
+- Example: `std::sort`, `std::find`, `std::binary_search`
+- The standard library has generic implementations of many common algorithms
+- The algorithms work on *ranges* specified by *iterators*:
+    - You can use your container's `being()` and `end()` to supply the range
+    - Algorithms thus run on any suitable container
 - Practical use:
-    - Algorithms, together with containers, are the bread and butter of C++
-    - You can implement solutions to many practical problems using them
-    - They help you avoid reinventing the wheel
+    - Many real-world problems can be reduced to a common algorithm
+        - Example: compare two containers with `std::inner_product`
+    - This helps you avoid reinventing the wheel
+    - You can expect the standard algorithms to have very few bugs
+        - Unlike your 2-minute attempts at these algorithms
 
 ---
 
-# The list of all algorithms
+# Algorithms in the standard library
 
-- There are two many to fit on a slide, but they are in two headers
+- There are two many to fit on a slide...
+- They are organized into two headers
 - `<algorithm>`: general algorithms, like sorting, enumerating, etc.
     - Full list: https://en.cppreference.com/w/cpp/algorithm
 - `<numeric>`: numerical algorithms, like reduce, inner product, etc.
     - Full list: https://en.cppreference.com/w/cpp/numeric
+- Look them up on the internet
 
 ---
 
-# Lesson #2: use algorithms when it makes sense (1)
+# Lesson #2: reduce your problems to STL algorithms (1)
 
-**Problem:** insert an element into a sorted vector so that it stays sorted.
+**Problem:** insert an element into a sorted vector. Vector must stay sorted.
 
 ```c++
 void InsertSorted(std::vector<int>& range, int item) {
@@ -302,9 +335,9 @@ void InsertSorted(std::vector<int>& range, int item) {
 
 ---
 
-# Lesson #2: use algorithms when it makes sense (2)
+# Lesson #2: reduce your problems to STL algorithms (2)
 
-**Solution:** let's use binary search!
+**Solution:** use binary search.
 
 ```c++
 void InsertSorted(std::vector<int>& range, int item) {
@@ -324,15 +357,15 @@ void InsertSorted(std::vector<int>& range, int item) {
 }
 ```
 
-- I haven't actually tested this code, and I'm quite confident it does NOT work
-- May be performant, but looks complicated
-- Binary search... come on, someone must have implemented that before me?
+- I haven't actually tested this code
+- I'm quite confident it does **not** work
+- Looks complicated
 
 ---
 
-# Lesson #2: use algorithms when it makes sense (3)
+# Lesson #2: reduce your problems to STL algorithms (3)
 
-Everybody used `std::sort` before, right?
+**Attempt one:** use `std::sort`
 
 ```c++
 void InsertSorted(std::vector<int>& range, int item) {
@@ -341,14 +374,15 @@ void InsertSorted(std::vector<int>& range, int item) {
 }
 ```
 
-- I'm pretty confident this solution actually works
-- But it is very ineffcient, now it's O(n*log(n)) comparisons
+- This solution very likely actually works
+- It's very inefficient though
+    - Sorting the whole vector is a waste
 
 ---
 
-# Lesson #2: use algorithms when it makes sense (4)
+# Lesson #2: reduce your problems to STL algorithms (4)
 
-`std::upper_bound` is lesser known, but is just exactly what we need:
+**Attempt one:** use `std::upper_bound`
 
 ```c++
 void InsertSorted(std::vector<int>& range, int item) {
@@ -357,15 +391,16 @@ void InsertSorted(std::vector<int>& range, int item) {
 }
 ```
 
-- I'm fairly confident this solution actually works
+- This solution fairly likely works
     - Though `std::lower_bound` and `std::upper_bound` are not trivial
-- It is also simple and efficient
+- It's as efficient as the hand-coded
+- But much simpler
 
 ---
 
-# Lesson #2: use algorithms when it makes sense (5)
+# Lesson #3: don't abuse your problems into STL algorithms
 
-Consider the following:
+A simple `for` loop over a range:
 
 ```c++
 for (auto& item : range) {
@@ -373,7 +408,7 @@ for (auto& item : range) {
 }
 ```
 
-We could also write this as:
+The same code using `std::for_each`:
 
 ```c++
 std::for_each(range.begin(), range.end(), [](auto& item){
@@ -381,12 +416,13 @@ std::for_each(range.begin(), range.end(), [](auto& item){
 })
 ```
 
-- The for loop is much cleaner, but in some cases, the `for_each` could also have some advantages
-- Don't abuse everything into STL algorithms, do what's simple and readable
+- The STL algorithm is actually less readable here
+- But you could also use parallel `for_each`
+- Do what's best for your codebase
 
 ---
 
-# Ranges: what is a range?
+# Range: definition
 
 Ranges are now formalized as a C++20 concept:
 
@@ -402,32 +438,34 @@ In plain text, an object is a range if you can:
 - call `ranges::begin` on it 
 - call `ranges::end` on it.
 
-All containers we talked about are ranges, but not all of the adaptors.
+- The containers mentioned before are ranges
+- Some container adaptors are not
 
 ---
 
-# Algorithms with ranges
+# Algorithms on ranges
 
-Always hated writing this?
+The syntax for algorithms is quite verbose:
 
 ```c++
 std::sort(numbers.begin(), numbers.end());
 ```
 
-Now you can write:
+Ranges simplify the syntax:
+
 ```c++
 std::ranges::sort(numbers);
 ```
 
-- The ranges library provides the same algorithms as we've discussed earlier
-- Now they work on ranges, not just on iterators
-- Since containers are ranges, they work directly on containers
+- A lot of algorithms have a `ranges` version
+- They operate on ranges, not pairs of iterators
+- Since containers are ranges, they work directly on entire containers
 
 ---
 
-# Views / range adaptors
+# Views (range adaptors)
 
-Consider a list of numbers:
+Let's take a list of numbers:
 
 ```c++
 std::vector<int> numbers = {...};
@@ -562,5 +600,3 @@ Get the slides and full source code on GitHub:
 [https://github.com/eth-cscs/cpp-course-2023](https://github.com/eth-cscs/cpp-course-2023)
 
 </div>
-
----
