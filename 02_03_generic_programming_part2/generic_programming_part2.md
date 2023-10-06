@@ -5,21 +5,24 @@ paginate: true
 backgroundColor: #fff
 backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
 size: 16:9
+style: |
+    div.hcenter {
+        width: 50%;
+        margin: 0 auto;
+    }
+    h1 {
+        text-align: center;
+    }
 --- 
-<style>   
-div.center-padded {
-    width: 50%;
-    margin: 0 auto;
-}
-</style>
-
-# **Concepts**
-![bg cover](../slides-support/common/title-bg3.png)
 <!-- _paginate: skip  -->
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-### Generic Programming
+![bg cover](../slides-support/common/title-bg3.png)
+
+# **Concepts**
+## An introduction
+
 Alberto Invernizzi, CSCS (alberto.invernizzi@cscs.ch)
 
 ---
@@ -38,7 +41,7 @@ This gives a lot of safety, plus it allows the language(=compiler) to do assumpt
 ---
 # 💪 Strong typing vs 🦆 duck typing?
 
-<div class="center-padded">
+<div class="hcenter">
 
 <!-- https://godbolt.org/z/41KdEd333 -->
 
@@ -101,8 +104,8 @@ enroll(Customer(), PremiumProgram());
 (cit)
 
 ---
-
-<div class="center-padded">
+<!-- _class: lead -->
+<div class="hcenter">
 
 Yeah, but having to write a function/class for every single type (and combination) does not scale...
 
@@ -124,11 +127,11 @@ float subtract(float a, float b);
 ---
 <center>
 
-## C++ GENERIC PROGRAMMING = TEMPLATE!
+# C++ GENERIC PROGRAMMING = TEMPLATE!
 
 </center>
 
-<div class="center-padded">
+<div class="hcenter">
 
 ```cpp
 template <class T>
@@ -152,7 +155,7 @@ It's slightly better, but in C++ we are not satisfied with sub-optimal solutions
 --- 
 # SFINAE
 
-<div class="center-padded">
+<div class="hcenter">
 
 **SFINAE** allows to disable/enable some overloads at certain conditions.
 
@@ -186,16 +189,18 @@ Actually, SFINAE allows us to do many things in a quite rigorous way.
 SFINAE is supported by the STL with:
 
 - `std::enable_if`
-  - it can be used in many ways to enable or disable a specialization (class, function, ...)
+it can be used in many ways to enable or disable a specialization (class, function, ...)
 - `#include <type_traits>`
-  - it provides some common and useful requirements and transformers for types
+it provides some common and useful requirements and transformers for types
 
 ---
 # SFINAE errors
 
-<div class="center-padded">
+<div class="hcenter">
 
-It's nice that we can figure out at compile time of errors instead of runtime...we like it! It means less error in production, safer code. Nice!
+It's nice that we can figure out at compile time of errors instead of runtime...we like it!
+
+It means less error in production, safer code. Nice! 🤩
 
 ```cpp
 #include <vector>
@@ -214,7 +219,7 @@ int main() {
 }
 ```
 
-There's an error in the code above...
+There's an error in the code above... 🧐
 
 </div>
 
@@ -396,7 +401,7 @@ They introduce some new language keywords and construct:
 ---
 # Template
 
-<div class="center-padded">
+<div class="hcenter">
 
 <!-- https://godbolt.org/z/rT11vxh43 -->
 
@@ -430,7 +435,7 @@ std::vector<float> res_v = mean(
 
 ---
 # SFINAE
-<div class="center-padded">
+<div class="hcenter">
 
 ```cpp
 #include <type_traits>
@@ -465,7 +470,7 @@ error: no type named 'type' in 'struct std::enable_if<false, void>'
 
 ---
 # Concepts
-<div class="center-padded">
+<div class="hcenter">
 
 ```cpp
 #include <concepts>
@@ -503,7 +508,11 @@ note: the expression 'is_floating_point_v<_Tp> [with _Tp = int]' evaluated to 'f
 <div class="twocolumns">
 <div>
 
+<center>
+
 ### SFINAE
+
+</center>
 
 ```cpp
 template <class Float,
@@ -516,7 +525,11 @@ Float mean(const Float a, const Float b) {
 </div>
 <div>
 
+<center>
+
 ### Concepts
+
+</center>
 
 ```cpp
 template <std::floating_point Float>
@@ -545,7 +558,9 @@ A couple of notes:
 # Exploring Concepts
 
 ---
-<div class="center-padded">
+# Syntactic variants
+
+<div class="hcenter">
 
 ```cpp
 template <std::floating_point Float>
@@ -572,7 +587,7 @@ std::floating_point auto mean(
 </div>
 
 ---
-<div class="center-padded">
+<div class="hcenter">
 
 ```cpp
 template <std::floating_point Float>
@@ -608,7 +623,7 @@ float res_03 = mean(2.0f, 3.0);
 ---
 # Multiple placeholder
 
-<div class="center-padded">
+<div class="hcenter">
 
 This fixes the problem of different types for arguments, because they can be deduced separately.
 
@@ -632,9 +647,9 @@ If we add a placeholder `FloatR`, since it cannot deduce the return type, it has
 </div>
 
 ---
-# ret-type contract
+# return-type contract
 
-<div class="center-padded">
+<div class="hcenter">
 
 Without constraints this is correct, since the floating point type used for `a` will be implicitly cast to `int`.
 
@@ -668,15 +683,19 @@ std::integral auto floor(const std::floating_point auto a) {
 </div>
 
 ---
-<div class="center-padded">
+<div class="hcenter">
 
 We didn't see much about concepts, but they already proved to be very useful! 😍
 
+Just by using them like this, we can easily constrain a type (better, a placeholder of a type, e.g. `auto`).
+
+<center>
+
 ```cpp
-<concept> <type>
+<concept_name> <type_placeholder>
 ```
 
-Just by using them like this, we can easily constrain a type (better, a placeholder of a type, e.g. `auto`).
+</center>
 
 We've already seen them in action in various places for functions, lastly for return types, but also for arguments...
 
@@ -685,8 +704,6 @@ Are arguments so different from variable definition!? Nope! Actually **we can us
 ```cpp
 const std::integral auto res = mean(1.0f, 2.0f);
 ```
-
-If `mean` returns a `float`, this is not going to build!
 
 </div>
 
@@ -697,28 +714,367 @@ If `mean` returns a `float`, this is not going to build!
 (syntax and new language constructs)
 
 ---
-require-expression
+# `requires` clause
+
+<div class="hcenter">
+
+Till now we used concepts without using any new keyword.
+
+```cpp
+template <std::floating_point T>
+T foo(const T a, const T b) {}
+```
+
+Actually there are more ways to express the same constraint using the `requires` keyword.
+
+**Constraining the template**
+
+```cpp
+template <class T> requires std::is_floating<T>
+T foo(const T a, const T b) {}
+```
+
+Or **constraining the function**
+```cpp
+template <class T>
+T foo(const T a, const T b) requires std::is_floating<T> {}
+```
+
+</div>
 
 ---
-require clause
+# `requires` expression
+
+<div class="hcenter">
+
+```
+requires (parameter-list) {
+    requirement_1;
+    requirement_2;
+    ...
+    requirement_n;
+}
+```
+
++ `parameter-list` like for functions (optional)
+Useful to get an instance of a particular type on which to define requirements
++ Each requirement has to match in order for a requirement expression to be true (lines are considered to have AND between them)
+
+</div>
 
 ---
-concept keyword
+# Requirements
+
+<div class="hcenter">
+
+1️⃣ **SIMPLE**: does it build?
+
+```cpp
+a + b;
+```
+
+2️⃣ **TYPE**: does it represent a type?
+
+```cpp
+typename A<B>;
+typename B::type;
+```
+
+3️⃣ **COMPOUND**: does it build and return type?
+
+```cpp
+{ x + b } noexcept -> std::same_as<T>;
+```
+
+4️⃣ **NESTED**: does it evaluate true?
+
+```cpp
+requires Same<T*, decltype(&a)>;
+```
+
+</div>
 
 ---
-concepts guideline
+# `requires requires`
+
+<div class="hcenter">
+
++ `requires` clause evaluates a boolean expression
++ `requires` expression returns a boolean value
+
+<span style="text-align: center">
+
+💡 Wait... I can combine them! 💡
+
+</span>
+
+```cpp
+template <class T, class U>
+requires requires {
+    std::floating_point<T>;
+    std::integral<U>;
+    } void foo(T a, U b) {
+}
+```
+
+# **...and is it a good idea?**
+
+---
+<!-- _class: lead-->
+
+# NO.
+
+---
+<!-- _class: lead -->
+
+## `requires requires` is generally a code smell.
+It might be better to define a concept for it instead of having something ad-hoc.
+
+---
+<!-- _class: lead -->
+
+# Can I define a new custom concept?!?!
+
+---
+<!-- _class: lead -->
+
+# Yes!
+
+---
+# `concept` keyword
+
+<div class="hcenter">
+
+Till now we used already defined concept, all the ones already available in STL.
+
+But we can define our ones!
+
+```cpp
+template <class>
+concept concept_name = bool_expression;
+```
+
+Where `bool_expression` can be whatever returns a compile time boolean value.
+
+For example a `type_trait`
+
+```cpp
+template <class T>
+concept blas_type = std::is_floating_point_v<T>;
+```
+
+Do you recall any other way of returning a bool value, which expresses a **requirement**?
+
+</div>
+
+---
+# `concept` keyword
+
+<div class="hcenter">
+
+A `requires` expression!
+
+```cpp
+template <class T>
+concept Num = requires (T a, T b) {
+    {a + b} -> std::same_as<T>;
+    {a - b} -> std::same_as<T>;
+    {a * b} -> std::same_as<T>;
+    {-a}  -> std::same_as<T>;
+};
+```
+
+However we define a concept with the `concept` keyword, this is identified as a **named concept**.
+
+This is how they are actually defined in STL the ones that we used in our initial examples, e.g. `std::floating_point` and `std::integral`.
+
+</div>
+
+---
+<!-- _class: lead -->
+
+# [STL Concepts Library](https://en.cppreference.com/w/cpp/concepts)
+### <span>en.cppreference.com/w/cpp/concepts</span>
+
+#### (Core, Comparison, Object, Callable, Iterator, Algorithm, Ranges)
+
+---
+# Concept guidelines
+
+<div class="hcenter">
 
 + naming
 + big topic, not single function
 + partial (for debugging, but also it's ok to start partial and refine later, it's hard)
 
+</div>
+
 ---
-Where to put cv qualified with concepts
+# An example: `Num`
+
+<div class="hcenter">
+
+```cpp
+#include <concepts>
+#include <string>
+#include <cmath>
+
+template <class T>
+concept Num = requires (T a, T b) {
+    {a + b} -> std::same_as<T>;
+    {a - b} -> std::same_as<T>;
+    {a * b} -> std::same_as<T>;
+    {-a}  -> std::same_as<T>;
+};
+```
+
+The generic library that uses `Num` concept, can be used with anything that complies with it!
+
+If someone implements `BigIntegers`?! If it respects the concept, the code should work.
+
+</div>
+
+---
+![bg](attachments/quiz-question.jpg)
+
+<h1 style="position: absolute; left: 0; top: 58%; text-align: center; color: white; width: 100%;">
+
+How would you specify cv-qualified concepts?
+
+</h1>
+
+---
+<!-- _class: lead -->
+<style scoped>
+    div.answer-block {
+        position: absolute;
+        bottom: 3%;
+        width: 93%;
+
+        background: white;
+        
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    div > pre {
+        text-align: center;
+        font-size: 35pt;
+        margin: 10px;
+    }
+</style>
+
+![bg](attachments/quiz-answer.jpg)
+
+<div class="answer-block">
+
+<div>
+
+```cpp
+const Concept auto & name
+```
+
+```cpp
+const Concept auto * const name
+```
+
+```cpp
+Concept const auto & name
+```
+
+</div>
+
+<div>
+
+```cpp
+Concept auto const & name
+```
+
+```cpp
+Concept auto & const name
+```
+
+```cpp
+Concept auto * const res6 = &val;
+```
+
+</div>
+</div>
+
+---
+<!-- _class: lead -->
+
+![bg right:40%](attachments/yoda.jpg)
+
+## How would you specify cv-qualified concepts?
+
+<div class="hcenter">
+
+<center>
+
+```cpp
+✅ const Concept auto & name
+```
+
+```cpp
+✅ const Concept auto * const name
+```
+
+```cpp
+❌ Concept const auto & name
+```
+
+```cpp
+✅ Concept auto const & name
+```
+
+```cpp
+❌ Concept auto & const name
+```
+
+```cpp
+✅ Concept auto * const res6
+```
+
+</center>
+
+</div>
 
 ---
 <!-- _class: lead -->
 
 # Concepts in reality
+
+---
+# Testing concepts
+
+<div class="hcenter">
+
+```cpp
+#include <concepts>
+#include <complex>
+#include <string>
+
+template <class T>
+concept Num = requires (T a, T b) {
+    {a + b} -> std::same_as<T>;
+    {a - b} -> std::same_as<T>;
+    {a * b} -> std::same_as<T>;
+    {-a}  -> std::same_as<T>;
+};
+```
+
+Since they are known at compile-time, we can test it with `static_assert`!
+
+```cpp
+static_assert(Num<int>);
+static_assert(Num<float>);
+static_assert(Num<std::complex<float>>);
+static_assert(Num<std::string>, "");
+```
+
+</div>
 
 ---
 # Type erasure
@@ -749,3 +1105,136 @@ It has some nice implications:
 
 Alberto Invernizzi
 Research Software Engineer @ CSCS
+
+---
+---
+<!-- _class: lead -->
+# BONUS
+
+---
+<!-- _class: lead -->
+# Why nested requirements?
+---
+# Why nested requirements?
+
+<div class="hcenter">
+
+What the simple requirement `a + b` do?
+
+```cpp
+requires {
+    a + b;
+}
+```
+
+1) check if the expression can be compiled;
+2) evaluate the expression
+
+</div>
+
+---
+# Why nested requirements?
+
+<div class="hcenter">
+
+So, what would you expect from this?
+
+```cpp
+#include <concepts>
+
+template <class... Args>
+requires requires {
+    sizeof...(Args) > 1;
+}
+void foo(Args&& ...) {}
+
+int main() {
+    foo(1);
+    foo(1, 2);
+    foo(1, 2, 3);
+}
+```
+
+</div>
+
+---
+# Why nested requirements?
+
+<div class="hcenter">
+
+So, what would you expect from this?
+
+```cpp
+#include <concepts>
+
+template <class... Args>
+requires requires {
+    sizeof...(Args) > 1;
+}
+void foo(Args&& ...) {}
+
+int main() {
+    // foo(1);          // error
+    foo(1, 2);
+    foo(1, 2, 3);
+}
+```
+
+</div>
+
+---
+<!-- _class: lead -->
+
+# Concepts vs Parameter Pack
+
+---
+# Concepts vs Parameter Pack
+
+<div class="hcenter">
+
+```cpp
+#include <concepts>
+
+template <class... Args>
+concept AtLeast2 = requires sizeof...(Args) >= 2;
+
+template <AtLeast2... Args>
+void foo(Args&&...) {}
+
+int main() {
+    foo(1, 2);  // error: AtLeast2<int>
+}
+```
+
+With the syntax
+```cpp
+template <Concept... Placeholder>
+```
+we're applying the type constraint to each single type of the parameter pack, **NOT** to the parameter pack as a whole.
+
+</div>
+
+---
+# Concepts vs Parameter Pack
+
+<div class="hcenter">
+
+```cpp
+#include <concepts>
+
+template <class... Args>
+concept AtLeast2 = requires sizeof...(Args) >= 2;
+
+template <class... Args>
+requires AtLeast2<Args...>
+void foo(Args&&...) {}
+
+int main() {
+    // foo(1);     // error: as per requirement
+    foo(1, 2);
+}
+```
+
+Now we are requiring that the full parameter pack `Args...` respect the concept `AtLeast2`.
+
+</div>
