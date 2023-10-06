@@ -13,7 +13,9 @@ std::size_t f(Ts... ts) {
         // (std::cout << ... << typeid(ts).name()) << '\n';
         return sizeof...(ts); };
 
-    // Are the following lines equivalent? Why? Why not?
+    // Are the following lines equivalent? Why? Why not?  What does class
+    // template argument deduction do? See
+    // https://eel.is/c++draft/over.match.class.deduct#1.3.
     return std::invoke(g, ts...);
     // return std::apply(g, std::tuple(ts...));
 }
