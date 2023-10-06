@@ -15,7 +15,7 @@ size: 16:9
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-## Templates (Generic Programming Part I)
+## Generic Programming Part I : Templates (+ some other stuff thrown in)
 
 ### John Biddiscombe / Mauro Bianco
 
@@ -72,7 +72,7 @@ size: 16:9
     int main() {
         foo<int>(65);
         foo<char>(65);  
-        foo<double>(3.14159);   
+        foo<double>(3.1415);   
         foo<std::string>(std::string("string")); 
     }
 ```
@@ -299,7 +299,7 @@ int main() {
 ## ADL - Namespace usage
 
 * The namespace of `t1`, `t2` are searched to find the right function
-  * just like when you call `std::cout << std::string('stuff')` 
+  * just like when you call `std::cout << std::string('stuff')`
 
 <div class="twocolumns">
 <div>
@@ -486,6 +486,36 @@ namespace two {
 
 ---
 
+## CRTP (Curiously Recurring Template Pattern) : static polymorphism
+
+```c++
+    template<typename Derived>
+    class controller_base {
+      template <typename... Args>
+      bool initialize(int i, bool b, Args... args) {
+          // lots of boilerplate code here
+          return static_cast<Derived*>(this)->initialize_derived(i, b, std::forward<Args>(args)...);
+      }
+    }
+    class controller : public controller_base<controller> {
+      void initialize_derived(int i, bool b, std::string const& s) {
+          // some special init for this type of controller
+      }
+    }
+
+    int main() {
+        controller c;
+        c.initialize(42, true, "some stuff");
+    }
+```
+
+* Polymorphism allows a call to be directed to the intended type
+  * shape->circle/square/blob - inheritance - traditionally uses VMT lookup
+* CRTP creates an "interface" that can be customized by derived types
+  * routing made at compile time - *because types are already known*
+
+---
+
 ## Default template arguments
 
 * Template arguments can be defaulted
@@ -569,8 +599,9 @@ output : `i d A` `i f A` `i d 65`
 
 ## Non type template arguments
 
-* Integral values can be used as template arguments
-  * also char, int, pointers and arbitrary types
+* Drop the `typename` syntax and instead specify a concrete `type`
+* Values can be used as template arguments
+  * bool, char, int, pointers and arbitrary types
 * Non type templates can also have default values
 
 ```c++
@@ -579,7 +610,7 @@ output : `i d A` `i f A` `i d 65`
         // a data value hardcoded for this type 
         static constexpr int value = I;
     };
-
+    
     int main() {
         std::cout << static_int<5>::value;
         std::cout << static_int<6>::value;
@@ -587,6 +618,7 @@ output : `i d A` `i f A` `i d 65`
 ```
 
 * Be aware that `static_int<5>` and `static_int<6>` are not the same *type*
+* You could (for example) specialize another template using `static_int<XXX>` types
 
 ---
 
@@ -668,12 +700,15 @@ output : `i d A` `i f A` `i d 65`
         Order<B> x;
     }
 ```
+
 `error: 'U' has not been declared`
 `error: template argument 2 is invalid`
 
 ---
 
 ## Default Template Arguments and Specializations
+
+* Which specialization applies
 
 ```c++
 template <typename T=double, int Size=10>
@@ -691,7 +726,6 @@ int main() {
     my_container<int,  15> v;             // uses specialization 2
     my_container<int>      y;             // uses specialization 1 (Size=10)
     my_container<>         x;             // primary (both default)
-
 }
 ```
 
@@ -699,7 +733,7 @@ int main() {
 
 ## SFINAE
 
-* Substitution Failure Is Not An Error
+* **Substitution Failure Is Not An Error**
   * When looking for specialization some substitution may fail
     * It's the backbone of templated code
     * Without it, nothing would work (compile)
@@ -714,6 +748,11 @@ int main() {
     template <typename T>
     struct X<T, typename T::extra_type> {};
 ```
+
+* When a substitution fails, the compiler ignores it and moves on
+* When it succeeds, it becomes a candidate for specialization/lookup
+* "concepts" and "constexpr if" can/will mostly do away with SFINAE
+  * but tons of existing code still uses it
 
 ---
 
@@ -751,8 +790,7 @@ int main() {
 `Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
 
 * use specialization If `T::extra_type` matches `U`
-* [Compiler explorer link](https://godbolt.org/z/nz7n67roe)
-* [Advanced link](https://godbolt.org/z/bovaf1P8T)
+* [Compiler explorer link](https://godbolt.org/z/nz7n67roe) : [More advanced link](https://godbolt.org/z/bovaf1P8T)
 
 ---
 
@@ -781,10 +819,18 @@ int main() {
 `int!` `not int`  
 
 * The failed version will not compile so the good version is selected - SFINAE
+* The `void` template parameter is allowed to be an empty param (like void in a function)
 
 ---
 
 ## `std::enable_if` : Possible implementations
+
+<div class="twocolumns">
+<div>
+
+* Example 1:
+  * Specialization for true defines `type = T`
+  * Specialization for false doesn't exist, so `type` doesn't either
 
 ```c++
     template<bool B, class T = void> 
@@ -794,7 +840,18 @@ int main() {
     struct enable_if<true, T> { 
         using type = T;
     };
+    
+```
 
+</div>
+<div>
+
+* Example 2:
+  * Specialization for true defines `type = T`
+  * Entire class doesn't exist for false, but SFINAE works (Not An Error)
+    * We **declared** a class, but never instantiated anything for false
+
+```c++
     template<bool B, class T = void> 
     struct enable_if;
 
@@ -802,8 +859,11 @@ int main() {
     struct enable_if<true, T> { 
         using type = T;
     };
-
+    
 ```
+
+</div>
+</div>
 
 ---
 
@@ -830,8 +890,9 @@ int main() {
 ```
 
 * Just like the previous version, but slightly easier to understand
+  * Cruft is a jargon word for anything that is left over, redundant and getting in the way. It is used particularly for defective, superseded, useless, superfluous, or dysfunctional elements in computer software
 
----
+<!-- ---
 
 ## SFINAE: `void_t`
 
@@ -853,11 +914,17 @@ int main() {
             return a+b;
         }
     };    
-```
+``` -->
 
 ---
 
 ## Class Template Type Deduction (C++17)
+
+<div class="twocolumns">
+<div>
+
+* When instantiating a templated class, the constructor can be used to deduce the type
+* Caution, if A in a header and type not specified, you might not even know it's templated
 
 ```c++
     template <typename T>
@@ -868,37 +935,55 @@ int main() {
     };
 
     int main() {
-        A<int> x(3);
-        A y(3); // A<int>
-    }
+        A<int> x(3);    // c++ pre c++17
+        A      y(3);    // A<int> is deduced via the constructor
+        A      y(3.14); // A<double>  deduced
+    }    
 ```
+
+</div>
+<div>
+
+* So what?
 
 ```c++
   template <typename F>
   struct B {
-      F f;
+      F f; // a function that we want to store and call later
       B(F&& f) : f{std::move(f)} {}
 
-      template <typename ...Args>
+      template <typename... Args>
       void call(Args&&... args) {
           f(std::forward<Args>(args)...);
       }
   };
 
   int main() {
+      // explicitly declaring the type is messy and requires temporary variable
       auto f = [](int i, int j) {cout << i+j << "\n"};
       B<decltype(f)> a{std::move(f)};
 
+      // CTAD allows a lambda to be passed directly in
       B b{[](int i, int j) {cout << i+j << "\n";}};
 
       a.call(3,4);
       b.call(3,4);
-  }
+  }    
 ```
+
+</div>
+</div>
+
+* When writing algorithms that take functions/predicates and call functions in other templated parameters, knowing the exact type can become very long winded / difficult
 
 ---
 
 ## Class Template Type Deduction (C++17)
+
+<div class="twocolumns">
+<div>
+
+* It still works if there are extra parameters/templates in the constructor
 
 ```c++
     template <typename T>
@@ -910,31 +995,35 @@ int main() {
     };
 
     int main() {
-        A<int> x(3, 3.4, 7);
-        A y(3, 3.4, 7); // A<int>
-        A z{y}; // A<int>
+        A<int>  x(3, 3.4, 7);  
+        A       y(3, 3.4, 7); // A<int>
+        A       z{y};         // A<int> copy
     }
 ```
 
+</div>
+<div>
+* Internally, the compiler is doing the heavy lifting by deduction using the equivalent of auto-generated (function template) helpers
+
 ```c++
-    template <typename T , typename U >
+    // Fictional function templated on <T,U> that returns the right type of A
+    template <typename T , typename U>
     A<T> make_A(T a , U x, int y) {
         return A<T>{a, x, y};
-    } // Fictional function template
+    } 
 
+    // Fictional function template for a copy constructor
     template <typename T>
     A<T> make_A(A<T> a) {
         return A<T>{a};
-    } // Fictional function template
+    } 
 
     int main() {
-        A<int> x(3, 3.4, 7);
-        auto y = make_A(3);
-        auto z = make_A(y);
+        A<int> x(3, 3.4, 7);         // explicit T, deduced U
+        auto y = make_A(3, 3.4, 7);  // function template argument deduction 
+        auto z = make_A(y);          // copy usnng the same mechanism
     }
 ```
-
----
 
 ---
 
@@ -1114,14 +1203,14 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
 ## Alias templates
 
-* Typedefs on steroids!
+* typedefs on steroids!
   * But they are still really just typedefs
-
-  * ```c++
+  
+  ```c++
       using integer_type = int;
       // same as
       typedef int integer_type;
-    ```
+  ```
 
   * But you can template them, which is really helpful
 
@@ -1131,10 +1220,9 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
     using my_type = std::vector<T>;
 
     // and then later on
-    my_type<double> x(100);
+    my_type<double> x(100);    
   ```
 
-  *
 * Many template arguments and defaults are allowed
 
   ```c++
@@ -1424,6 +1512,17 @@ int main() {
     my_container<int, vector, allocator> my_c3(42);
 ```
 
+---
+
+## Concluding remarks
+
+* Whenever you write the same basic code structure multiple times
+  * Can you template it?
+* CPU version / GPU version
+  * Basically the same, but with some tweaks
+  * Abstract most out, and specialize for the special bits
+* Traits
+
 <!-- 
 --- 
 
@@ -1442,31 +1541,3 @@ Variant with a visitor - using `auto`
 ``` -->
 
 ---
-
-|First Image|Second Image|
-|:-:|:-:|
-|![First Image](https://images.pexels.com/photos/585759/pexels-photo-585759.jpeg?h=128)|![Second Image](https://images.pexels.com/photos/1335115/pexels-photo-1335115.jpeg?h=128)|
-
----
-
-# A Slide with two columns
-
-<div class="twocolumns">
-<div>
-
-## Code
-
-```c++
-void f(int x) {
-}
-```
-
-</div>
-<div>
-
-## Explanations
-
-declaration of a function f...
-
-</div>
-</div>
