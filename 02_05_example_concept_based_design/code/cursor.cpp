@@ -78,12 +78,9 @@ class any_cursor {
     std::unique_ptr<iface> impl_;
 
 public:
-    template <Cursor C>
-    any_cursor(C cur) : impl_{ new impl<C>(std::move(cur)) } {}
+    template <Cursor C> any_cursor(C cur) : impl_{ new impl<C>(std::move(cur)) } {}
 
-    friend auto cursor_done(any_cursor const& cur) -> decltype(auto) {
-        return cur.impl_->done();
-    }
+    friend auto cursor_done(any_cursor const& cur) -> decltype(auto) { return cur.impl_->done(); }
     friend auto cursor_next(any_cursor& cur) -> decltype(auto) {
         cur.impl_->next();
     }
@@ -106,7 +103,7 @@ struct numbers_from {
     numbers_from(T value) : value_(value) {}
 #endif
 
-    friend T cursor_get(numbers_from const& cur) { return cur.value_; }
+    friend T const& cursor_get(numbers_from const& cur) { return cur.value_; }
     friend void cursor_next(numbers_from& cur) { ++cur.value_; }
 };
 static_assert(Cursor<numbers_from<int>>);
