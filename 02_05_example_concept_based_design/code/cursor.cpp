@@ -78,7 +78,8 @@ class any_cursor {
     std::unique_ptr<iface> impl_;
 
 public:
-    template <Cursor C> any_cursor(C cur) : impl_{ new impl<C>(std::move(cur)) } {}
+    template <class C>
+    any_cursor(C cur) : impl_{ new impl<C>(std::move(cur)) } {}
 
     friend auto cursor_done(any_cursor const& cur) -> decltype(auto) { return cur.impl_->done(); }
     friend auto cursor_next(any_cursor& cur) -> decltype(auto) {
