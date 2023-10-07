@@ -1,5 +1,6 @@
 #include <concepts>
 #include <iostream>
+#include <memory>
 #include <type_traits>
 
 #if __cpp_deduction_guides < 201907L
@@ -49,6 +50,47 @@ namespace pipes {
         }
     }
 }; // namespace pipes
+
+template <class T>
+class any_cursor {
+    struct iface {
+        virtual ~iface(){};
+        virtual T get() const = 0;
+        virtual bool done() const = 0;
+        virtual void next() = 0;
+    };
+
+    template <Cursor C>
+    struct impl : iface {
+        C cur_;
+        impl(C cur) : cur_(std::move(cur)) {}
+        T get() const {
+            return cursor::get(cur_);
+        }
+        bool done() const {
+            return cursor::done(cur_);
+        }
+        void next() {
+            cursor::next(cur_);
+        }
+    };
+
+    std::unique_ptr<iface> impl_;
+
+public:
+    template <Cursor C>
+    any_cursor(C cur) : impl_{ new impl<C>(std::move(cur)) } {}
+
+    friend auto cursor_done(any_cursor const& cur) -> decltype(auto) {
+        return cur.impl_->done();
+    }
+    friend auto cursor_next(any_cursor& cur) -> decltype(auto) {
+        cur.impl_->next();
+    }
+    friend auto cursor_get(any_cursor const& cur) -> decltype(auto) {
+        return cur.impl_->get();
+    }
+};
 
 } // namespace cursor
 
@@ -149,4 +191,13 @@ int main() {
     n | squared | take_and_dump;
     constexpr auto square_and_dump = squared | dump;
     // square_and_dump(n);
+
+    constexpr auto dump_any_int_cursor = [](cursor::any_cursor<int> cur) {
+        for (; !cursor::done(cur); cursor::next(cur)) {
+            std::cout << cursor::get(cur) << std::endl;
+        }
+    };
+
+    auto any_c = cursor::any_cursor<int>(numbers_from(42) | take(2));
+    dump_any_int_cursor(std::move(any_c));
 }
