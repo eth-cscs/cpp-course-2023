@@ -41,7 +41,7 @@ namespace pipes {
     template <class F, class G>
     constexpr auto operator|(F&& f, G&& g) -> decltype(auto) {
         if constexpr (std::is_invocable_v<G&&, F&&>) {
-            return g(f);
+            return std::forward<G>(g)(std::forward<F>(f));
         }
         else {
             return [g = std::forward<G>(g), f = std::forward<F>(f)](auto&&... args) {
@@ -132,7 +132,7 @@ struct take_impl_ {
 };
 
 constexpr inline auto take = [](int n) {
-    return [n](Cursor auto&& cur) { return take_impl_<decltype(cur)>(std::forward<decltype(cur)>(cur), n); };
+    return [n]<Cursor C>(C&& cur) { return take_impl_<C>(std::forward<C>(cur), n); };
 };
 
 template <class Fun, Cursor C>
@@ -157,8 +157,8 @@ struct transform_impl_ {
 };
 
 constexpr inline auto transform = [](auto f) {
-    return [f = std::move(f)](Cursor auto&& cur) {
-        return transform_impl_<decltype(f), decltype(cur)>(std::move(f), std::forward<decltype(cur)>(cur));
+    return [f = std::move(f)]<Cursor C>(C&& cur) {
+        return transform_impl_<decltype(f), C>(std::move(f), std::forward<C>(cur));
     };
 };
 
@@ -178,7 +178,7 @@ int main() {
     // dump(transform([](auto a) { return a * a; })(take(5)(numbers_from(5))));
 
     using namespace cursor::pipes;
-    // numbers_from(5) | take(5) | dump;
+    numbers_from(5) | take(5) | dump;
     constexpr auto take_and_dump = take(5) | dump;
     numbers_from(-5) | take_and_dump;
     auto n = numbers_from(0);
@@ -189,6 +189,9 @@ int main() {
     n | squared | take_and_dump;
     constexpr auto square_and_dump = squared | dump;
     // square_and_dump(n);
+
+    auto algo = squared | take(5) | squared;
+    numbers_from(2) | algo | dump;
 
     constexpr auto dump_any_int_cursor = [](cursor::any_cursor<int> cur) {
         for (; !cursor::done(cur); cursor::next(cur)) {
