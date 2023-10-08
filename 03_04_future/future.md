@@ -296,7 +296,167 @@ std::for_each(
 
 # `std::simd`
 
-- ...
+<div class="twocolumns">
+<div>
+
+- SIMD: single instruction multiple data
+- Modern processors: wide registers with machine instructions acting on the multiple data
+- SSE, SSE2, AVX, AVX2, AVX512, SVE, SVE2
+- Many libraries:
+  - vir::stdx::simd
+  - Agner Fog’s Vector Types
+  - E.V.E.
+  - xsimd
+  - Vc
+  - highway
+  - kokkos
+
+</div>
+<div>
+
+- Standardization efforts for C++26
+  - std::experimental::simd (data parallelism TS v2)
+  - std::(experimental::)simd implementation from Intel in progress (permutation operations and support for complex numbers)
+  - std::simd prototyping https://github.com/mattkretz/simd-prototyping/
+  - https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2803r0.pdf
+
+</div>
+<div>
+
+---
+
+# `std::simd`
+
+- `std::simd<T, Abi>`
+  - behaves mostly like object of type`T` but operates on multiple values (element-wise)
+  - Abi (template-template parameter) determines vector width (`size`) and ABI (i.e. how parameters are passed to functions)
+    - `std::simd_abi::native<T>`: most efficient for given hardware
+    - `std::simd_abi::fixed_size<T, N>`: user-defined width
+
+<div class="twocolumns">
+<div>
+
+### Scalar
+
+```c++
+double f(double x) {
+    return x * 2.;
+}
+```
+
+</div>
+<div>
+
+### SIMD
+
+```c++
+std::simd<double> f(std::simd<double> x) {
+    return x * 2.;
+}
+```
+
+</div>
+</div>
+
+---
+
+# `std::simd`: Loop parallelization
+
+<div class="twocolumns">
+<div>
+
+```c++
+void f(std::vector<float>& data) {
+    using V = std::native_simd<float>;
+    std::size_t i = 0
+    for (; i + V::size() <= data.size(); i += V::size()) {
+        v(&data[i], std::element_aligned);
+        v = std::sin(v);
+        v.copy_to(&data[i], std::element_aligned);
+    }
+    for (; i < data.size(); ++i) {
+        data[i] = std::sin(data[i]);
+    }
+}
+```
+
+</div>
+<div>
+
+select simd type/Abi
+
+loop in `V::size()` increments
+load data (pay attention to alignment `memory_alignment_v<V>`)
+store data
+
+You often need an “epilogue”
+
+</div>
+</div>
+
+- efforts to integrate simd with parallel algorithms (P0350)
+
+```c++
+std::transform(std::execution::simd,
+    data.begin(), data.end(), data.begin(),
+    [](auto x) {
+        return std::sin(x);
+    });
+```
+
+---
+
+# `std::simd`: Generic enough?
+
+<div class="twocolumns">
+<div>
+
+```c++
+template<typename T>
+T f(T x) {
+    return x * 2.;
+}
+```
+</div>
+<div>
+
+- works, but:
+  - be careful with constants (`2.f` insted of `2.`)
+  - what about conditionals?
+
+</div>
+</div>
+
+<div class="twocolumns">
+<div>
+
+```c++
+template <typename T>
+T f(T x) {
+    std::where(x > 0.f, x) *= 2.f;
+    return x;
+}
+```
+
+</div>
+<div>
+
+- `std::where`
+  - takes a `std::simd_mask<T, Abi>` as first argument (data-parallel type with the element type bool)
+  - returns a `std::where_expression<simd_mask, simd>`: abstracts the notion of selected elements
+  - works for scalars, as well
+
+</div>
+</div>
+
+---
+
+# `std::simd`: Conclusions
+
+- SIMD width is selected at compile time (Abi)
+- Speed-up is often a factor of `size()` , but may be less, depending on hardware details
+- Requires refactoring of code (loops, elimination of conditionals, introduction of `where` expressions)
+- P0350 may help for simple cases
 
 ---
 
