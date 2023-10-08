@@ -348,12 +348,14 @@ cmake -B [build directory] -S . \
     + we will use it quite a bit
 * [quick-bench.com](https://quick-bench.com) a site to easily a quickly benchmark C++ code (and inspect disassembly)
 * [cppinsights.io](https://cppinsights.io/) lets you see the C++ code that clangs generates for lambdas, range for-loops, structured bindings,...
+* [gcc-explorer.com](https://gcc-explorer.com/) makes error logs clickable, openening an IDE
+* [build-bench.com](https://build-bench.com) compare the build time of code snippets with various compilers
 * [www.onlinegdb.com](https://www.onlinegdb.com/) lets you debug a program using gdb
 
 ---
 ## Textual/Documentation Resources
 
-* The [isocpp.org](https://isocpp.org) site is main entry point for the C++ standaard and related things (news, articles, blogs,...)
+* The [isocpp.org](https://isocpp.org) site is main entry point for the C++ standard and related things (news, articles, blogs,...)
     + The [C++ Core Guidelines](http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) are a set of tried-and-true guidelines, rules, and best practices about coding in C++
 * [cplusplus.com](https://cplusplus.com) has tutorials articles, and a good
     + [C++ reference](https://cplusplus.com/reference/) that covers the stl library
@@ -435,6 +437,7 @@ part of the llvm/clang project
 * Sanitizers add extra checks to the compiled code
 * this is normally a small overhead with respect to the default execution
 * a run of the tests with sanitizers enabled is an excellent CI action
+* with cmake consider using [ECMEnableSanitizers](https://github.com/KDE/extra-cmake-modules/blob/master/modules/ECMEnableSanitizers.cmake) ([documentation](https://api.kde.org/ecm/module/ECMEnableSanitizers.html) or [sanitizer-cmake](https://github.com/arsenm/sanitizers-cmake)
 
 </div>
 <div>
