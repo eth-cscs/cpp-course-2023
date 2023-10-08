@@ -60,6 +60,117 @@ template<
 
 ---
 
+# std::mdspan<...>
+
+```c++
+template<
+    class T,
+    class Extents,
+    class LayoutPolicy = std::layout_right,
+    class AccessorPolicy = std::default_accessor<T>
+> class mdspan;
+```
+```c++
+std::vector<float> v(100);
+auto v_span = std::mdspan(v.data(), std::extents{ 10, 10 });
+```
+
+- `T` is the element type (`my_mdspan::element_type`): `float`
+- `Extents` describes number of dimensions and there sizes (required to be spezialization of `std::extents`)
+- `LayoutPolicy` describes memory layout (`my_mdspan::layout_type`): default `std::layout_right` (C-layout)
+- `AccessorPolicy` allows customization how we access the data (`my_mdspan::accessor_type`):
+  think `std::default_accessor<T>` does pointer dereference of `T*`
+
+```c++
+v_span[2, 3] = 42.;
+```
+---
+
+# std::extents
+
+- can describe run-time and compile-time extents
+- compile-time extents are helpful for optimizations (explicit by library implementor or implicit by compiler)
+
+- very easy (thanks to CTAD): `std::extents{ 10, 10 }`
+
+```c++
+template< class IndexType, std::size_t... Extents >
+class extents;
+```
+
+- `IndexType` is a signed or unsigned integer type
+- each element of `Extents` is either
+  - `std::dynamic_extent` or 
+  - representable as value of `IndexType` (compile-time extents)
+
+---
+
+# std::extents
+
+## Examples
+
+```c++
+auto ext1 = std::extents<int, std::dynamic_extent, 3, std::dynamic_extent, 4>{ 42, 43 };
+static_assert(decltype(ext1)::rank() == 4);
+static_assert(decltype(ext1)::rank_dynamic() == 2);
+static_assert(decltype(ext1)::static_extent(0) == std::dynamic_extent);
+assert(ext1.extent(0) == 42);
+static_assert(decltype(ext1)::static_extent(1) == 3);
+static_assert(std::extent_v<decltype(ext1), 2> == 3);
+```
+
+```c++
+auto ext2 = std::extents<std::uint8_t, 3, 4>{};
+static_assert(decltype(ext2)::static_extent(0) == 3);
+static_assert(decltype(ext2)::static_extent(1) == 4);
+```
+
+```c++
+auto ext3 = std::extents{ 42, 44 };
+static_assert(decltype(ext3)::static_extent(42) == std::dynamic_extent);
+assert(ext3.extent(0) == 42);
+```
+
+```c++
+auto ext4 = std::dextents<int, 3>{ 42, 43, 44 };
+```
+
+---
+
+# LayoutPolicy
+
+
+<div class="twocolumns">
+<div>
+
+- provided policies:
+  - `std::layout_right` (default, row-major, C-layout)
+  - `std::layout_left` (column-major, Fortran-layout)
+  - `std::layout_stride` generalization for arbitrary strides
+
+
+</div>
+<div>
+<img src="Row_and_column_major_order.png" style="width: 35%" align="left"/>
+
+https://commons.wikimedia.org/wiki/User:Cmglee, CC BY-SA 4.0
+</div>
+</div>
+
+
+```c++
+std::vector<float> v(100);
+
+using strided_md_span = std::mdspan<float, std::dextents<std::size_t, 3>, std::layout_stride>;
+auto s = strided_md_span(v.data(), { std::dextents<std::size_t, 3>(2, 5, 10), std::array<std::size_t, 3>{ 5, 1, 10 } });
+
+s[1, 2, 3] = 42;
+assert((v[2 + 5 + 30] == s[1, 2, 3]));
+```
+
+
+---
+
 # Layout example*
 
 ```c++
@@ -97,6 +208,11 @@ custom layout allow
 
 ---
 
+# AccessorPolicy
+
+
+
+---
 # Custom accessor example
 
 prevent to use device mdspan on host
