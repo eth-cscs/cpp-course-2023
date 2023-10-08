@@ -40,7 +40,7 @@ How to interface between libraries?
 
 `std::mdspan ` is a non-owning multi-dimensional array view
 
-- since C++23, see https://wg21.link/p0009
+- since C++23, see https://wg21.link/p0009 and  https://eel.is/c++draft/views#multidim
 ![](md_span_implementation_status.png)
 - think of *pointer* and *metadata* (how to interpret the pointed-to memory)
 
@@ -139,7 +139,6 @@ auto ext4 = std::dextents<int, 3>{ 42, 43, 44 };
 
 # LayoutPolicy
 
-
 <div class="twocolumns">
 <div>
 
@@ -147,8 +146,9 @@ auto ext4 = std::dextents<int, 3>{ 42, 43, 44 };
   - `std::layout_right` (default, row-major, C-layout)
   - `std::layout_left` (column-major, Fortran-layout)
   - `std::layout_stride` generalization for arbitrary strides
-
-
+- custom layout:
+  - skip elements (e.g. tiling)
+  - multiple indices to one same element
 </div>
 <div>
 <img src="Row_and_column_major_order.png" style="width: 35%" align="left"/>
@@ -159,13 +159,10 @@ https://commons.wikimedia.org/wiki/User:Cmglee, CC BY-SA 4.0
 
 
 ```c++
-std::vector<float> v(100);
-
 using strided_md_span = std::mdspan<float, std::dextents<std::size_t, 3>, std::layout_stride>;
-auto s = strided_md_span(v.data(), { std::dextents<std::size_t, 3>(2, 5, 10), std::array<std::size_t, 3>{ 5, 1, 10 } });
+auto s = strided_md_span(some_ptr, { std::dextents<std::size_t, 3>(2, 5, 10), std::array<std::size_t, 3>{ 5, 1, 10 } });
 
-s[1, 2, 3] = 42;
-assert((v[2 + 5 + 30] == s[1, 2, 3]));
+assert((some_ptr[2 + 5 + 30] == s[1, 2, 3]));
 ```
 
 
@@ -200,25 +197,82 @@ std::for_each(std::execution::par_unseq,
 
 ---
 
-# More about Layout
-
-custom layout allow
-- to skip elements (useful for tiling)
-- map multiple indices to the same element
-
----
-
 # AccessorPolicy
 
+## Example
 
+```c++
+template <class ElementType>
+struct default_accessor {
+  using offset_policy = default_accessor;
+  using element_type = ElementType;
+  using reference = ElementType&;
+  using data_handle_type = ElementType*;
+
+  // some ctors
+
+  constexpr data_handle_type offset(data_handle_type p, size_t i) const noexcept {
+    return p + i;
+  }
+
+  constexpr reference access(data_handle_type p, size_t i) const noexcept {
+    return p[i];
+  }
+};
+```
 
 ---
-# Custom accessor example
+# Custom Accessor Example: protect host/device access
 
-prevent to use device mdspan on host
+```c++
+template <class ElementType, DeviceType Device>
+struct host_device_protector {
+    using offset_policy = host_device_protector; using element_type = ElementType;
+    using reference = ElementType&; using data_handle_type = ElementType*;
+
+    constexpr data_handle_type offset(data_handle_type p, size_t i) const noexcept { return p + i; }
+
+    constexpr reference access(data_handle_type p, size_t i) const noexcept {
+#ifdef __CUDA_ARCH__
+        static_assert(Device == DeviceType::CUDA);
+#else
+        static_assert(Device == DeviceType::CPU);
+#endif
+        return p[i];
+    }
+};
+```
+```c++
+void test_host_device_protector() {
+    float* dev_ptr = allocate_some_cuda_memory<float>(4);
+    auto s = std::mdspan<float, std::dextents<int, 2>, std::layout_right, host_device_protector<float, DeviceType::CPU>>{ dev_ptr, std::dextents<int, 2>{ 2, 2 } };
+    std::cout << s[1, 2] << std::endl;
+}
+```
+
+```bash
+> error: static assertion failed due to requirement '(DeviceType)1 == DeviceType::CPU'
+```
 
 ---
 
 # submdspan
 
-- not part of C++23, but in working draft for C++26
+- not part of C++23, but in working draft for C++26, see https://wg21.link/p2630 and https://eel.is/c++draft/mdspan.submdspan
+
+---
+
+# Example: mdspan from custom mdarray\*
+
+
+
+
+
+\* std::mdarray is proposed in https://wg21.link/p1684
+
+---
+# Questions?
+![bg cover](../slides-support/common/title-bg2.png)
+<!-- _paginate: skip  -->
+<!-- _class: titlecover -->
+<!-- _footer: "" -->
