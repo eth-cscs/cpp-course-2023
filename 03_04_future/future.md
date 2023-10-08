@@ -129,7 +129,105 @@ auto main() -> int { std::println("Hello, world!"); }
 
 # `std::expected`
 
-- ...
+- C++ lacks a language level multi-return type
+  - store either result in case of **success**
+  - or store error information in case of **failure**
+
+### Workarounds
+
+<div class="twocolumns">
+<div>
+
+- C style flags: `int fun(args..., Result& r)`
+  - need to construct `Result` type before (assignable)
+  - cumbersome and error-prone to check
+  - limited error information
+  - not composable
+- `std::optional`
+  - is *value-or-nothing* (no error information)
+
+</div>
+<div>
+
+- exceptions
+  - undesired (inversion of control flow)
+  - disabled for certain hardware/applications
+  - expensive to unwind
+  - error-prone (forget to check)
+
+</div>
+</div>
+
+---
+
+# `std::expected<T, E>`: Overview
+
+- Introduced in C++23
+- similar to a `union`/`std::variant` behind the scenes
+- no dynamic memory allocation
+- *value-or-error* semantics (never empty)
+- `T` is the `value_type` which is the *expected* type
+- `E` is the `error_type` which is the *unexpected* type
+- explicit access of result (no implicit converison)
+- access of *value* when result is *unexpected*: throw exception
+- access of *error* when result is *expected*: throw exception
+
+---
+
+# `std::expected<T, E>`: Basic Usage
+
+<div class="twocolumns">
+<div>
+
+### Construction (by callee)
+
+```c++
+auto foo(std::string const& s) noexcept -> std::expected<double, std::string> {
+    // wrap C-style parser for example
+    double r;
+    if (parse(s, &r))
+        return r;
+    else
+        return std::unexpected(std::string{"could not parse"});
+}
+```
+
+- interface familiar from `std::optional`
+- use `std::unexpected<E>` to represent unexpected value (`E` == `std::string` here)
+
+</div>
+<div>
+
+### Operations (by caller)
+
+```c++
+if (auto r =foo(s); r.has_value())
+    std::cout << r.value() << "\n";
+else
+    std::cout << r.error() << "\n";
+```
+
+- explicit access of value/error
+- `value_or(U other)` akin to `std::optional`
+
+</div>
+</div>
+
+---
+
+# `std::expected<T, E>`: Monadic Operations (map, bind)
+
+- named after a concept from category theory (familiar from haskell)
+- increase composability (functional programming style)
+  - signature`expected<T1,E1>::op(F&& f) -> expected<T2, E2>`
+  - apply function `f` on the current result (pass `*this` as argument to `f`)
+
+| result     | `F: T1 -> T2` `G: E1 -> E2` | `F: T1 -> expected<T2, E1>` `G: E1 -> expected<T1, E2>` | return type        |
+|------------|-----------------------------|---------------------------------------------------------|--------------------|
+| expected   | `transform(F&&)`            | `and_then(F&&)`                                         | `expected<T2, E1>` |
+| unexpected | `transform_error(G&&)`      | `or_else(G&&)`                                          | `expected<T1, E2>` |
+
+- extended example at https://godbolt.org/z/dEGYa6fGW
 
 ---
 
