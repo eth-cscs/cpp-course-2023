@@ -126,7 +126,7 @@ what about this?
 
 <br></br>
 
-defeats purpose: have to make an interface template
+defeats purpose: have interface template
 for each type that we may encounter
 
 </div>
@@ -164,6 +164,7 @@ from documentation: needs `parse` and `format` function
 
 - no additional runtime overhead
 - usually doesn't require allocation
+- issues?
 
 ---
 
@@ -216,15 +217,15 @@ unqualified call to swap (note: not `std::swap(a, b)`)
 | simple to invoke | kinda | need to remember to make namespace available |
 | hard to incorrectly invoke | no | use `std::swap(...)` by mistake |
 | code shows intent | no | `std::swap` is just a function template in the standard library |
-| easy to verify for a given type | no | only with separate concept |
+| easy to verify for a given type | no | only with separate concept  |
 
 ---
 
-# Static Polymorphism: Customization Point Objects
+# Static Polymorphism: Customization Point Objects (CPOs)
 
 - idea: separate 
-  - the piece that the user needs to specialize and
-  - the piece that the user needs to invoke (*must* not specialize)
+  - the piece that the user needs to specialize (found by ADL) and
+  - the piece that the user needs to invoke (*must not* specialize, ADL turned off)
 - consider this helper function:
 
 ```c++
@@ -294,6 +295,8 @@ std2::swap(a, b);
 </div>
 </div>
 
+- important gain: we can now check constraints on types (concept checking)
+
 ---
 
 |   | customization points objects | |
@@ -305,7 +308,7 @@ std2::swap(a, b);
 | simple to invoke | yes | both qualified and unqualified calls work |
 | hard to incorrectly invoke | yes | qualified call works equally well |
 | code shows intent | no | hard to see from objects |
-| easy to verify for a given type | no | only with separate concept |
+| easy to verify for a given type | partially | with separate concept |
 
 Other issues
 - ususally requires more code
@@ -314,6 +317,37 @@ Other issues
 ---
 
 # Static Polymorphism: tag_invoke
+
+- Solve shortcommings of CPOs
+    - do not claim identifier name globally (which is needed for ADL)
+    - handle (type-erased) wrapper types transparently
+
+- idea: use one CPO called `tag_invoke` which takes an arbitrary CPO as argument
+
+```c++
+namespace hidden {
+    struct tag_invoke_fn {
+        template<typename CPO, typename... Args>
+        constexpr auto operator()(CPO cpo, Args&&... args) const /* noexcept clause */ 
+            -> decltype(tag_invoke((CPO &&) cpo, (Args &&) args...)) {
+            return tag_invoke((CPO &&) cpo, (Args &&) args...);
+        }
+    };
+}
+inline constexpr hidden::tag_invoke_fn tag_invoke{};
+
+// some more helper types and values:
+template <auto& CPO>
+using tag_t = ...;
+
+template <typename CPO, typename... Args>
+using tag_invoke_result_t = ...;
+
+template <typename CPO, typename... Args>
+inline constexpr bool is_tag_invocable_v = ...;
+```
+
+---
 
 
 ---
