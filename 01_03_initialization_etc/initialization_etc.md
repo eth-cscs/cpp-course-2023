@@ -5,6 +5,15 @@ paginate: true
 backgroundColor: #fff
 backgroundImage: url(../slides-support/common/4k-slide-bg-white.png)
 size: 16:9
+style: |
+    div.hcenter {
+        width: 60%;
+        margin: 0 auto;
+    }
+
+    .hcenter h1:first-child {
+        text-align: center;
+    }
 ---
 
 # **Resource Management**
@@ -17,44 +26,46 @@ size: 16:9
 Alberto Invernizzi, CSCS (alberto.invernizzi@cscs.ch)
 
 ---
-<style scoped>
-    section {
-        display: flex;
-        align-items: center;
-    }
-</style>
-
+<!-- _class: lead -->
 ![bg right:40%](./attachments/c++-logo.png)
 
-<span>
 C++ is an object-oriented programming language that among its main selling points has
 
 - 🏎️ Performances
 - 🎛️ Letting the user have full control over resources
 
 **Performance** and **full-control** are somehow faces of the same coin: full control allows to do very clever and smart things to get best performances.
-</span>
 
 ---
 <!-- _class: lead -->
 
-*"... and with great power comes great responsibility."*
-
 ![bg left](./attachments/business-spiderman-working-computer-office-1359497850d.jpg)
 
+*"... and with great power comes great responsibility."*
+
 ---
+<div class="hcenter">
+
 # Example: Memory
 
 Memory management is an important aspects for many application, be it for
-+ for optimization reasons (e.g.reduce memory operations costs and overhead) or
-+ memory limit constraints (e.g. embedded applications)
++ for optimization reasons
+e.g.reduce memory operations costs and overhead)
++ memory limit constraints
+e.g. embedded applications
 
-This is one of the reasons why C++ is used in many industries, from Game Development to HPC, where performance and control matters.
+This is one of the reasons why C++ is used in many industries, from Game Development to HPC.
+
+Anywhere performance and control matters.
 
 Indeed, C++ gives you all the knobs to manage the memory: when to allocate, when to deallocate, how much to allocate, ...
 
+</div>
+
 ---
-## It's not just about memory ... it's about RESOURCE!
+<div class="hcenter">
+
+# It's not just about memory<br/>... it's about RESOURCEs!
 
 + Memory
 + File
@@ -70,9 +81,10 @@ Full control of a resource means managing it correctly by
 + 👋 release it cleanly when not useful anymore.
 
 ---
-# Why should we care?
-
+<!-- _class: lead -->
 ![bg right:35%](./attachments/bender-who-cares.jpg)
+
+# Why should we care?
 
 Not managing correctly resources may end up in subtle bugs...
 
@@ -94,23 +106,30 @@ When the program complexity starts increasing, to ensure the correct management 
 ...and with concurrency it becomes even more difficult (**="impossible"** 🤯).
 
 ---
-# Full control does not imply hard to do!
+<!-- _class: lead -->
 
-Some languages address this using **garbage collectors**, but this comes at the expense of performances and control. So, it's not a solution for C++...
+<div class="hcenter">
 
-...but having full control does not imply having to do it manually.
+# Full control $\not\equiv$ hard to do!
+
+Some languages address this problem using **garbage collectors**
+but at the expense of performances and control.
+
+**Not a solution for C++...**
+
+...but having full control does not imply having to do it manually!
 
 The language, through the compiler, is at our disposal. We can and should leverage it at our service.
 
 Here we are going to see what tools the language offers us and which we can and should rely on to keep things under control, aiming at
 
-<center>
-
 **READABLE**, **CORRECT** and **EFFICIENT** code.
 
-</center>
+</div>
 
 ---
+<div class="hcenter">
+
 # RAII
 
 **RAII**, which stands for *Resource Allocation Is Initialization*, is a programming technique that binds resource acquisition to **object lifetime**.
@@ -120,18 +139,22 @@ If an object follows RAII, it ensures that:
 + it will be available for the lifetime of the object
 + and when the object is destroyed (it goes out of scope) the binded resource will be released too.
 
+</div>
+
 ---
+<div class="hcenter">
+
 # Ownership
 
-A fundamental concept that goes along with RAII is the one of **OWNERSHIP**.
+With RAII an object starts representing the **ownership** of the resource, so object has the responsibility of the correct management.
 
-With RAII an object starts representing the ownership of the resource, so it has the responsibility of the correct management.
-
-Developer does not have anymore the direct responsibility of the resource, but it does not mean they don’t have anymore control over it.
+Developer does not have anymore the "direct" responsibility of the resource, but it does not mean they don’t have anymore control over it.
 
 We delegated the hard-work of managing correctly the resource to the object and we can now reason about its ownership.
 
 It’s a higher level of control, we don’t care anymore about what happens when the resource has to be created/released, we just have to think where and how long we need the resource and manipulate the object accordingly.
+
+</div>
 
 ---
 <!-- _class: lead -->
@@ -142,14 +165,11 @@ It’s a higher level of control, we don’t care anymore about what happens whe
 ## (Resource = Memory)
 
 ---
+<div class="hcenter">
 
-<!-- _class: lead -->
-
-## Raw Pointers
+# Raw Pointers
 
 Every C and C++ developer had to overcome the obstacle of pointers...
-
-<div style="width: 50%; margin: 0 auto;">
 
 ```cpp
 void foo() {
@@ -174,28 +194,34 @@ void foo() {
 ---
 <!-- _class: lead -->
 
-## But are they the right tool for managing resources?
-### (i.e. resource = memory in this case)
+# But are they the right tool for managing resources?
+## (i.e. resource = memory in this case)
 
 ---
-# Ambiguity: who is responsible?
+<div class="hcenter">
 
-Even without looking at the documentation, it seems clear that this function "allocates" and a reasonable expectation is that what it returns is a pointer to a memory allocated by the function.
+# Problem: Who is in charge?
+
+Even without looking at the documentation, a reasonable expectation is that what it returns is a pointer to a memory allocated by the function.
 
 ```cpp
-gsl_multifit_fsolver * gsl_multifit_fsolver_alloc (const gsl_multifit_fsolver_type * T, size_t n, size_t p);
+gsl_multifit_fsolver* gsl_multifit_fsolver_alloc(
+    const gsl_multifit_fsolver_type * T,
+    size_t n,
+    size_t p);
 ```
 
 + is it up to me to deallocate it and keep it alive, right?
-+ should I keep it alive till when I need it?
-+ or is there something else depending on it (e.g. internal to the library)?
++ and `T`? should it be kept alive till `multifit_solver` is in use, correct?
+
+</div>
 
 ---
-# Problem: how should it be deallocated?
+# Problem: how should it be released?
 
 How was it allocated?
-+ new -> delete
-+ new[] -> delete[]
++ `new` -> `delete`
++ `new[]` -> `delete[]`
 
 <div class="twocolumns">
 <div>
@@ -238,7 +264,6 @@ it's not about being too lazy, it's more about cognitive load
 e.g. track dependencies between resources, is it deterministic?
 
 </div>
-
 <div>
 
 ```cpp
@@ -273,13 +298,11 @@ Possible output:
 </div>
 
 ---
-<!-- _class: lead -->
+<div class="hcenter">
 
-## Have you considered all execution paths?
+# <!--fit--> Have you considered all execution paths?
 
 If a function has multiple return statements, you may have to care about it multiple times...
-
-<div style="width: 50%; margin: 0 auto;">
 
 ```cpp
 bool foo(int a, int b) {
@@ -301,12 +324,11 @@ bool foo(int a, int b) {
 </div>
 
 ---
-<!-- _class: lead -->
-## ... even exceptions?
+<div class="hcenter">
+
+# ... even exceptions?
 
 In case of an exception not managed, it becomes impossible to manage release correctly...
-
-<div style="width: 50%; margin: 0 auto;">
 
 ```cpp
 float foo(int a, int b) {
@@ -329,25 +351,28 @@ float foo(int a, int b) {
 ---
 <!-- _class: lead -->
 
-# <!-- fit  --> Raw pointers do not follow RAII and do not express ownership.
+# Raw pointers
+## do **NOT** follow RAII
+## and do **NOT** express ownership.
 
 ---
 <!-- _class: lead -->
-
 ![bg](./attachments/smart-idea.jpeg)
 
-<div style="width: 50%; position: absolute; right: 0; margin: 3%">
+<span style="width: 50%; position: absolute; right: 0; margin-right: 3%; color: white">
 
-## <span style="color: white">What if we could have an object that allows us to avoid these problems by implementing RAII and expressing ownership?!</span>
+## What if we could have an object that allows us to avoid these problems by implementing RAII and expressing ownership?!
 
-</div>
+</span>
 
 ---
+<div class="hcenter">
+
 # Object Lifetime - C'tor and D'tor
 
-RAII binds a resource to object lifetime. Let's see what are the main handles we have on object lifetime.
+RAII binds a resource to object lifetime.
 
-<div style="width: 50%; margin: 0 auto;">
+Let's see what are the main handles we have on object lifetime.
 
 ```c++
 {
@@ -357,13 +382,10 @@ RAII binds a resource to object lifetime. Let's see what are the main handles we
 }                       // d'tor is called
 ```
 
-</div>
+The language gives us the handle to the moment when an object starts is lifetime through its <mark>**constructor**</mark>!
 
-The language gives us the handle to the moment when an object starts is lifetime through its **constructor**!
+**And what happen when it goes out of scope?** It gets destroyed...and the language gives us the chance to customize what happens at destruction time through its <mark>**destructor**</mark>!
 
-And what happen when it goes out of scope? It gets destroyed...and the language gives us the chance to customize what happens at destruction time through its **destructor**!
-
-</div>
 </div>
 
 ---
@@ -400,7 +422,7 @@ private:
 + it goes out of scope (e.g. block, expression, ...)
 + stack unwinding, i.e. when an exception is uncaught
 
-We are binding a resource with an object on the *stack*, so we are transitively giving properties of an object on the stack to a resource!
+We are binding a resource with an object on the *stack*, so **we are transitively giving properties of an *object on the stack* to a *resource***!
 
 ---
 # Object Lifetime in action: multiple return points
@@ -513,7 +535,7 @@ We can pass it around, for instance we can copy it!
 + **What happens when we copy an object?**
 From the language perspective, a new object is created...
 + **...and what should happen from the resource perspective?**
-It depends! (we'll see more soon)
+It depends!
 
 <center>
 
@@ -528,6 +550,7 @@ It depends! (we'll see more soon)
 + **What happens?** Default behavior of the language.
 
 The language cannot know aforehead how the object should behave, so it does the most simple thing.
+
 It implicitly defines them (`= default`)
 + D'tor does nothing, i.e. empty body
 + Copy-{C'tor, Assigment Operator}, copy by value all attributes
@@ -559,7 +582,7 @@ private:
 </div>
 
 ---
-# SPOILER-ALERT: really bad!
+# [[ SPOILER-ALERT ]] really bad!
 
 <div class="twocolumns">
 <div>
@@ -612,12 +635,12 @@ If a class requires either a:
 it almost certainly requires all three.
 
 ---
-# What to do?
+# What to do? It depends!
 
-What *copy-{c'tor,assignment}* should do depends on how the object should behave on copy (*object semantic*).
+What *copy-{c'tor,assignment}* should do depends on how the object should behave on copy (*object semantic*) with respect to the controlled resource.
 
 It might be:
-- clone
+- clone (aka "deep-copy")
 should it allocate another identical and independent resource and copy its value?
 - not-copyable
 should it just not being copiable at all? (`= delete`)
@@ -765,26 +788,26 @@ when there are more objects managing the same resource (not clones, but exactly 
 Let's make it useful!
 
 ### ToDo
++ Generalization for different resources/types
++ Allow customization of destructor (each resource has different needs)
 + Specialization for T and T[]
-+ Ways to access the memory
++ Ways to access the reosource
 + Decide what to do about ownership
 + ...
 
 ---
 <!-- _class: lead -->
 
-Wait...if this is so useful and fantastic,
-
-It is something probably existing in every C++ codebase!
-Everyone should use it, no!?
+## Wait...if this is so useful and fantastic,
+#### It is something probably existing in every C++ codebase!
+#### Everyone should use it, no!?
 
 ---
 <!-- _class: lead -->
-
 ![bg right:60%](attachments/stone-wheel.png)
 
-The savvy uses to say
-*"don't reinvent the wheel"*
+## The savvy uses to say
+#### *"don't reinvent the wheel"*
 
 ---
 # STL Smart Pointers
@@ -861,7 +884,7 @@ How can this information about usage be shared among multiple objects?
 
 # `shared_ptr<T>`: the machinery
 
-They are aka **reference counted smart pointers**, which exposes their internal mechanism.
+They are aka **reference counted smart pointers**, which definition already exposes their internal mechanism.
 
 ![](./attachments/shared_ptr-machinery.png)
 
@@ -929,6 +952,8 @@ Each time we copy the `shared_ptr`, we are working on a shared control block. Th
 # Raw + Smart pointers
 
 ---
+<div class="hcenter">
+
 # Raw pointers are really useful!
 
 Smart pointers are not a one solution fits all, raw pointers are still very useful!
@@ -938,6 +963,8 @@ The main point to keep in mind is about *ownership*:
 + Smart pointers = owning
 
 By using them correctly, you vehiculate a very important information via your API.
+
+</div>
 
 ---
 # CPP Core Guidelines
@@ -964,40 +991,39 @@ By using them correctly, you vehiculate a very important information via your AP
 ![bg 50%](attachments/whoarewe-performances.png)
 
 ---
-
-<div style='width:60%; margin: 0 auto'>
+<div class="hcenter">
 
 <!-- https://godbolt.org/z/sd4TWGYf1 -->
 
 ```cpp
 struct Dataset {
     Dataset() {
-        std::cout << "Created dataset!" << std::endl;
+        std::cout << "Created dataset!\n";
     };
     ~Dataset() {
-        std::cout << "Deleting dataset!" << std::endl;
+        std::cout << "Deleting dataset!\n";
     }
     Dataset(const Dataset&) {
-        std::cout << "Copying GBs of data" << std::endl;
+        std::cout << "Create dataset copying GBs of data\n";
     }
     Dataset& operator=(const Dataset&) {
-        std::cout << "Copying GBs of data" << std::endl;
+        std::cout << "Copying GBs of data\n";
         return *this;
     }
     void initialize() {
-        std::cout << "Initialize dataset..." << std::endl;
+        std::cout << "Initialize dataset...\n";
     }
 };
 ```
 
 The semantic of this object is:
 + Default C'tor create a dataset
-+ Data inside a dataset can be "cloned" inside another one (aka "deep-copy")
++ Data inside a dataset can be deep-copied
 
 </div>
 
 ---
-<div style='width:50%; margin: 0 auto'>
+<div class="hcenter">
 
 ```cpp
 Dataset a;
@@ -1022,7 +1048,7 @@ Two datasets created, one copy, two datasets destroyed.
 </div>
 
 ---
-<div style='width:50%; margin: 0 auto'>
+<div class="hcenter">
 
 ```cpp
 Dataset createDataset() {
@@ -1040,7 +1066,7 @@ Initialize dataset...
 Deleting dataset!
 ```
 
-I would have expected:
+🤔 I would have expected:
 + Two datasets created (`x` default, `b` copied)
 + Two dataset destroyed
 
@@ -1055,28 +1081,31 @@ Wow! No copy?!?  Indeed, there is no copy: it does not call the copy-c'tor! Than
 </center>
 
 ---
+<div class="hcenter">
+
 # Copy elision
 
 <cite>
 
-"Omits copy [...] **constructor**, resulting in zero-copy pass-by-value semantics." </cite>
+"(copy-elision) omits copy [...] **constructor**, resulting in zero-copy pass-by-value semantics." </cite>
 
 </cite>
-
-<div style='width:50%; margin: 0 auto'>
 
 ```cpp
 Dataset b = createDataset();
 ```
 
+**Is it a copy-constructor or a copy-assignment?**
+
+The copy assignment is a member function, so it has to be applied to an existing object.
+But at this point the object does not exist yet, so even if it looks like an assignment, it is actually a constructor call, a copy-c'tor call!
+
+*Ok, from the code we expect a copy constructor call, and copy elision explicitly refers to the constructor and not to the assignment operator...*
+
 </div>
 
-**Is it a copy-constructor or a copy-assignment?** The copy assignment is a member function, so it has to be applied to an existing object. But at that point the object does not exist yet, so even if it looks like an assignment, it is actually a constructor call, a copy-c'tor call!
-
-Ok, from the code we expect a copy constructor call, and copy elision explicitly refers to the constructor and not to the assignment operator...
-
 ---
-<div style='width:50%; margin: 0 auto'>
+<div class="hcenter">
 
 ```cpp
 Dataset createDataset() {
@@ -1097,11 +1126,11 @@ Deleting dataset!
 Deleting dataset!
 ```
 
-</div>
-
 No copy-elision at the party, and performance are gone!
 
 ...is it so different than before?! A temporary dataset is created and, instead of using that (as in copy-elision case), it gets copied from, just before discarding it?!
+
+</div>
 
 <center>
 
@@ -1168,11 +1197,12 @@ b = createDataset();
 But, before seeing the handle, let's understand a bit better this question about temporaries...
 
 ---
+
 # In the beginning there was just LEFT and RIGHT...
 
 Even if they are not 100% correct, these definitions are very good approximations.
 
-+ `lvalue`s can stay **<mark>"tipically"</mark>** the **left** side of `=`, and `rvalues` can **<mark>"tipically"</mark>** stay on the **right**.
++ `lvalue`s can stay **<mark>"tipically"</mark>** on the **left** side of `=`, and `rvalues` can **<mark>"tipically"</mark>** stay on the **right**.
 + `lvalue` is **<mark>"tipically"</mark>** something with an **identity**, and `rvalue` has **<mark>"tipically"</mark>** **no identity**
 
 For them, the language offers two different kind of references that binds to them.
@@ -1221,6 +1251,8 @@ Desiderata:
 We used the word "steal", because a temporary object can get completely emptied. In C++ it is used the word "move", from which it origins the **move-semantic**, meaning that the "ownership" of a resource can be moved from one object to another.
 
 ---
+<div class="hcenter">
+
 # What handles do we have?
 
 Let's give another look at references that binds to `lvalues` and `rvalues`:
@@ -1228,11 +1260,9 @@ Let's give another look at references that binds to `lvalues` and `rvalues`:
 `lvalue` -> `&`
 `rvalue` -> `&&`
 
-Actually...
+Actually, in the **<mark>copy c'tor</mark>** and in the **<mark>copy assignment operator</mark>** we use the `const&`, which is an `lvalue` reference...
 
 <center>
-
-In the **<mark>copy c'tor</mark>** and in the **<mark>copy assignment operator</mark>** we use the `const&`, which is an `lvalue` reference...
 
 `Dataset(const Dataset&)` and `Dataset& operator=(const Dataset&)`
 
@@ -1245,35 +1275,34 @@ We get a **<mark>move c'tor</mark>** and a **<mark>move assignment operator</mar
 </center>
 
 ---
+<div class="hcenter">
 
-<div style='width:60%; margin: 0 auto'>
-
-<!-- https://godbolt.org/z/nnsK7E5nW -->
+<!-- https://godbolt.org/z/qhrT1xfhr -->
 
 ```cpp
 struct Dataset {
     Dataset() {
-        std::cout << "Created dataset!" << std::endl;
+        std::cout << "Created dataset!\n";
     };
     ~Dataset() {
-        std::cout << "Deleting dataset!" << std::endl;
+        std::cout << "Deleting dataset!\n";
     }
     Dataset(const Dataset&) {
-        std::cout << "Copying GBs of data" << std::endl;
+        std::cout << "Create dataset copying GBs of data\n";
     }
     Dataset& operator=(const Dataset&) {
-        std::cout << "Copying GBs of data" << std::endl;
+        std::cout << "Copying GBs of data\n";
         return *this;
     }
     Dataset(Dataset&&) {
-        std::cout << "Stole dataset" << std::endl;
+        std::cout << "Stole dataset\n";
     }
     Dataset& operator=(Dataset&&) {
-        std::cout << "Stole dataset" << std::endl;
+        std::cout << "Stole dataset\n";
         return *this;
     }
     void initialize() {
-        std::cout << "Initialize dataset..." << std::endl;
+        std::cout << "Initialize dataset...\n";
     }
 };
 ```
@@ -1285,8 +1314,9 @@ Now `Dataset` is able to behave differently depending on the value category of t
 </div>
 
 ---
+<!-- _class: lead -->
 
-<div style='width:50%; margin: 0 auto'>
+<div class="hcenter">
 
 ```cpp
 Dataset b;
@@ -1304,13 +1334,7 @@ Deleting dataset!
 
 Now the temporary gets stolen during the assignment.
 
-<center>
-
 ### Performance are back!
-
-</center>
-
-</div>
 
 ---
 # Rule of Five
@@ -1339,9 +1363,9 @@ Because the presence of a user-defined (or `= default` or `= delete`)
 
 We might want to move resources also from an `lvalue`, because we know it is going to be destroyed soon or it is not going to be used anymore.
 
-C++ gives us an handle also for this! We can make an `lvalue` appear like an `rvalue` with `std::move()`!
+C++ gives us an handle also for this! We can "move" ownership also from an `lvalue` with `std::move()`!
 
-<div style='width:50%; margin: 0 auto'>
+<div class="hcenter">
 
 ```cpp
 Dataset a;
@@ -1371,9 +1395,15 @@ The "move" of the resources is up to the function that gets the `rvalue` referen
 
 Indeed, `std::move` is just an unconditional cast from an lvalue reference to an rvalue reference!
 
+<center>
+
+### It makes an `lvalue` appear like an `rvalue`!
+
+</center>
+
 Actually, the implementation is something very similar to this simplified snippet
 
-<div style="width: 40%; margin: 0 auto;">
+<div class="hcenter">
 
 ```cpp
 T&& std::move(T& lvalue) {
@@ -1383,10 +1413,18 @@ T&& std::move(T& lvalue) {
 
 </div>
 
-Example implementation from LLVM libc++ https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/utility/move.h
+<center>
+
+*See actual LLVM libc++ implementation @
+https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/utility/move.h*
+
+</center>
 
 ---
+<!-- _class: lead -->
+# Value categories
 
+---
 # Value categories
 
 <center>
@@ -1437,8 +1475,9 @@ Example implementation from LLVM libc++ https://github.com/llvm/llvm-project/blo
 </center>
 
 ---
+# <!--fit--> Why `lvalue`/`rvalue` definintions in terms of is a good approximation?
 
-# Why `lvalue` vs `rvalue` is a good approximation?
+<div class="hcenter">
 
 From https://en.cppreference.com/w/cpp/language/reference
 
@@ -1447,8 +1486,6 @@ From https://en.cppreference.com/w/cpp/language/reference
 When a function's return type is lvalue reference, the function call expression becomes an lvalue expression:
 
 </cite>
-
-<div style="width:50%; margin: 0 auto;">
 
 ```cpp
 #include <iostream>
@@ -1483,12 +1520,14 @@ B. RuleOf0
 C. RuleOf8
 
 ---
-# Rule of Zero
-TODO What do you see? a rabbit? a three? or a zero? There is one more additional rule.
-
 ![bg left:33%](./attachments/zero.png)
+# Rule of Zero
+
+TODO DEFINITION
 
 ---
+
+TODO EXAMPLE
 
 <div class="twocolumns">
 
@@ -1564,14 +1603,18 @@ int main (void)
 </div>
 
 ---
+
+TODO RuleOf3 is superseeded, use either RuleOf0 or RuleOf5
+
+---
 # Conclusion/Recap
 
 + Introduction to RAII and Ownership
 + RuleOfThree
 + Smart Pointers
 + Move semantic as an optimization chance
-+ Value categories
 + RuleOfFive
++ Value categories
 + RuleOfZero
 
 ---
