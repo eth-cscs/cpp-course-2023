@@ -19,3 +19,5 @@ target_compile_options(03_01_cache_block_size PRIVATE ${CPP_COURSE_AVX_OPTION})
 add_executable(03_01_cache_false_sharing 
     code/cache_false_sharing.cpp
 )
+
+add_subdirectory(code/nbody)
