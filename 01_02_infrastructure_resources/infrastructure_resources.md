@@ -36,19 +36,20 @@ size: 16:9
 + Web resources
     + web tools
     + Textual/Documentation Resources
++ Editors/IDEs
+    + remote editing
 
 </div>
 <div>
 
-+ Editors/IDEs
-    + remote editing
 + Remote Environements
     + containers (dev-containers)
     + gitpod
-+ CI
 + sanitizers/analyzers
 + debugger
 + profilers
++ Test frameworks
++ CI
 
 </div>
 </div>
@@ -228,6 +229,7 @@ build with `scons`
 - One often underestimates the time needed until a code works well and solves the issue.
 - try to use stdlib or existing libraries
 
+---
 # Package Managers
 
 * package managers can help you install the libraries you require.
@@ -351,28 +353,28 @@ cmake -B [build directory] -S . \
 ---
 ## Textual/Documentation Resources
 
-+ The [isocpp.org](https://isocpp.org) site is main entry point for the C++ standaard and related things (news, articles, blogs,...)
+* The [isocpp.org](https://isocpp.org) site is main entry point for the C++ standaard and related things (news, articles, blogs,...)
     + The [C++ Core Guidelines](http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) are a set of tried-and-true guidelines, rules, and best practices about coding in C++
-+ [cplusplus.com](https://cplusplus.com) has tutorials articles, and a good
+* [cplusplus.com](https://cplusplus.com) has tutorials articles, and a good
     + [C++ reference](https://cplusplus.com/reference/) that covers the stl library
-+ [hackingcpp.com](https://hackingcpp.com) a good collection of various C++ learning resources
+* [hackingcpp.com](https://hackingcpp.com) a good collection of various C++ learning resources
     + with an excellent [Tools Ecosystem Overview](https://hackingcpp.com/cpp/tools/ecosystem.html).
 
 ---
 
 # Editors and IDEs
 
-+ C++  needs to be written, there are various editors that can be used, from the classic [vim](https://www.vim.org)/[neovim](https://neovim.io), [emacs](https://www.gnu.org/software/emacs/) and [micro](https://github.com/zyedidia/micro) to [Kate](https://kate-editor.org/), [Geany](https://www.geany.org/) [QtCreator](https://github.com/qt-creator/qt-creator) and [Visual Studio Code](https://code.visualstudio.com).
-+ to help editing, completion, go to definition, find all references,... can be very useful.
-+ They can be provided by a [Language Server](https://microsoft.github.io/language-server-protocol/). As long as you use an editor that supports the Language Server Protocol it you can have good support in it.
-+ [clangd](https://clangd.llvm.org) provides excellent support for C++ in an editor independent way.
+* C++  needs to be written, there are various editors that can be used, from the classic [vim](https://www.vim.org)/[neovim](https://neovim.io), [emacs](https://www.gnu.org/software/emacs/) and [micro](https://github.com/zyedidia/micro) to [Kate](https://kate-editor.org/), [Geany](https://www.geany.org/) [QtCreator](https://github.com/qt-creator/qt-creator) and [Visual Studio Code](https://code.visualstudio.com).
+* to help editing, completion, go to definition, find all references,... can be very useful.
+* They can be provided by a [Language Server](https://microsoft.github.io/language-server-protocol/). As long as you use an editor that supports the Language Server Protocol it you can have good support in it.
+* [clangd](https://clangd.llvm.org) provides excellent support for C++ in an editor independent way.
     + `cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1;  ln -s ~/myproject/compile_commands.json ~/myproject-build/` enables good completion with cmake, you can use [bear](https://github.com/rizsotto/Bear) for the other build tools
     + [ccls](https://github.com/MaskRay/ccls) is an alternative language server
-+ Enabling clangd in your editor
+* Enabling clangd in your editor
     + vim: [YouCompleteMe](https://ycm-core.github.io/YouCompleteMe/) or [LanguageClient-neovim](https://github.com/autozimu/LanguageClient-neovim)
     + nvim: [coc.nvim](https://github.com/neoclide/coc.nvim) and [coc-clangd](https://github.com/clangd/coc-clangd) or [LanguageClient-neovim](https://github.com/autozimu/LanguageClient-neovim)
     + emacs [eglot](https://clangd.llvm.org/installation) or [lsp-mode](https://emacs-lsp.github.io/lsp-mode/tutorials/CPP-guide/)
-+ If you have no preferred Editor [Visual Studio Code](https://code.visualstudio.com) is an editor with good support.
+* If you have no preferred Editor [Visual Studio Code](https://code.visualstudio.com) is flexible editor with good support.
 
 ---
 # Remote editing
@@ -407,15 +409,15 @@ cmake -B [build directory] -S . \
 * [clang format](https://clang.llvm.org/docs/ClangFormat.html) (of llvm/clang) can be customized by a `.clang-format` file that you can add to your repository, and `git clang-format` reformats the changes you have staged, so that you can review them
 part of the llvm/clang project
 * other options:
-    * [Artistic Style](http://astyle.sourceforge.net/)
-    * [Uncrustify](https://github.com/uncrustify/uncrustify)
+    + [Artistic Style](http://astyle.sourceforge.net/)
+    + [Uncrustify](https://github.com/uncrustify/uncrustify)
 
 ---
 # Git
 
-+ you should always use some version control software
-+ [git](https://git-scm.com) is the de-facto industry standard for version control
-+ little reason not to use it, we assume you do
+* you should always use some version control software
+* [git](https://git-scm.com) is the de-facto industry standard for version control
+* little reason not to use it, we assume you do
 
 ---
 # CI
@@ -430,24 +432,24 @@ part of the llvm/clang project
 <div class="twocolumns">
 <div>
 
-+ Sanitizers add extra checks to the compiled code
-+ this is normally a small overhead with respect to the default execution
-+ a run of the tests with sanitizers enabled is an excellent CI action
+* Sanitizers add extra checks to the compiled code
+* this is normally a small overhead with respect to the default execution
+* a run of the tests with sanitizers enabled is an excellent CI action
 
 </div>
 <div>
 
-+ [ASAN (Address Sanitizer)](https://clang.llvm.org/docs/AddressSanitizer.html)
+* [ASAN (Address Sanitizer)](https://clang.llvm.org/docs/AddressSanitizer.html)
 g++ -fsanitize=address
 clang++ -fsanitize=address
 cl.exe /fsanitize=address
-+ [UBSAN (Undefined Behavior Sanitizer)](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
+* [UBSAN (Undefined Behavior Sanitizer)](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
 g++ -fsanitize=undefined
 clang++ -fsanitize=undefined
-+ [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
+* [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
 g++ -fsanitize=leak
 clang++ -fsanitize=leak
-+ [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
+* [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
 g++ -fsanitize=thread
 clang++ -fsanitize=thread
 
@@ -457,24 +459,30 @@ clang++ -fsanitize=thread
 ---
 # Analyzers
 
-+ [Clang-Tidy](http://clang.llvm.org/extra/clang-tidy.html)
-clang-based linter tool, part of the extra clang tools
-diagnoses programming errors, style violations, interface misuse
-valgrind
+* Static analyzers might find potential issues, this can be useful, but soethime you have quite a bit of noise (false positives), making it more costly for large codebases
+* [Clang-Tidy](http://clang.llvm.org/extra/clang-tidy.html)
+  clang-based linter tool, part of the extra clang tools
+  diagnoses programming errors, style violations, interface misuse
+  valgrind
+* [SonarSource](https://www.sonarsource.com) code analyzer with an opensource core with commercial extensions
+* [snyk.io](https://snyk.io/lp/snyk-open-source-scanner-c-cpp/) opensource code analyzers with commercial suite to find vulnerabilities
 
 ---
 # Profiling
 
-* [GNU Profiler (gprof)](https://sourceware.org/binutils/docs/gprof)
-ubiquitous, free software
-some IDEs can present gprof results in a GUI
+* Profile the real thing (unoptimized code might behave *very* differently)
+* [gprofng](https://sourceware.org/binutils/docs/gprofng.html)
+    + modern non intrusive sampling based
+    + supports optimized multithreaded applications
+    + HTML report (if wanted)
+    + simular to the older [perf](https://perf.wiki.kernel.org/index.php/Main_Page)
 * [Valgrind](https://valgrind.org) (cachegrind, callgrind)
     + Simulates the processor, 100s times slower, but exact behaviour of optimized code
     + --tool=memcheck leak, invalid read/write detection
     + --tool=callgrind runtime profiling
     + --tool=cachegrind cache profiling
     + --tool=massif heap memory profiling
-    + integration into various IDEs or visual tools, for example [kcachegrind](https://kcachegrind.sourceforge.net/html/Home.html)
+    + integration into various IDEs or visual tools, for example [{q/k}cachegrind](https://kcachegrind.github.io/html/Home.html)
 
 ---
 # Profiling 2
@@ -482,10 +490,167 @@ some IDEs can present gprof results in a GUI
 * [VTune Profiler](https://www.intel.com/content/www/us/en/developer/tools/oneapi/vtune-profiler.html) commercial, but free usage available
 * [Apple Instruments](https://help.apple.com/instruments/mac/current) various tools, quite nice, also non intrusive sampling based methods
 * [Coz – Causal Profiler](https://github.com/plasma-umass/coz)
-unique approach to profiling
-creates causal profile: "optimizing function X will have effect Y"
-profile is based on performance experiments
-program is partitioned into parts based on progress points (that are set in source code)
-no additional instrumentation of source code required
+    + unique approach to profiling
+    + creates causal profile: "optimizing function X will have effect Y"
+    + profile is based on performance experiments
+    + program is partitioned into parts based on progress points (that are set in source code)
+    + no additional instrumentation of source code required
 
 ---
+
+# Single Process Debuggers
+* debuggers let one inspect a running program and find issues 
+    * [GDB](https://www.gnu.org/software/gdb) the GNU debugger
+    * [lldb](https://lldb.llvm.org/) the LLVM project's debugger
+    * [rr](https://rr-project.org/) records program state over time
+        + replay & debug same recording many times
+        + reverse execution
+        + chaos mode for catching intermittent bugs
+* frontends
+    * [DDD](https://www.gnu.org/software/ddd) official GNU debugger frontend
+    * [seer](https://github.com/epasveer/seer) Qt based debugger frontend
+* Several IDEs integrate the debugger, for example [QtCreator](https://www.qt.io/product/development-tools), [Visual Studio Code](https://code.visualstudio.com)
+
+---
+# Parallel debuggers (mpi,...)
+Debugging parallel applications is not easy, often one resorts to a printf approach.
+There are commercial debuggers that support it, look at what is supported where you run.
+
+* [Linaro Forge (DDT)](https://www.linaroforge.com/linaroDdt/) (which used to be Allinea DDT, and then Amd forge) is a parallel debugger that is also [available at CSCS](https://user.cscs.ch/computing/analysis/ddt/)
+* [totalview](https://totalview.io) is another parallel commercial parallel debugger
+
+---
+# Testing frameworks
+
+* Tests and CI are important, they let you modify and refactor the code more agressivly because you know that it still works
+* Indeed in the TDD (Test Driven Development) you start by writing the tests even before you write the code
+* There are various frameworks that help you write tests, but the crucial thing are the tests, not the framework
+* If you work in a project that already uses a framework, consider using it (will probably integrate already well with CI)
+* Here we present some good options if you start from scratch
+
+---
+
+# [Catch2](https://github.com/catchorg/Catch2)
+
+<div class="twocolumns">
+<div>
+
+* allows for well-structured, self-documenting tests
+* relatively easy to set up
+* very good and concise documentation
+* data generator helpers
+* set of predefined matchers for comparing values
+* microbenchmarking tools
+* logging
+* Boost Software License 1.0
+[Intro/Tutorial](https://github.com/catchorg/Catch2/blob/devel/docs/tutorial.md#top) [Manual](https://github.com/catchorg/Catch2/blob/devel/docs/Readme.md#top) [Tutorial](https://github.com/catchorg/Catch2/blob/devel/docs/tutorial.md)
+
+</div>
+<div>
+
+```c++
+#include <catch2/catch_test_macros.hpp>
+
+unsigned int Factorial( unsigned int number ) {
+    return number <= 1 ? number : Factorial(number-1)*number;
+}
+
+TEST_CASE( "Factorials are computed", "[factorial]" ) {
+    REQUIRE( Factorial(1) == 1 );
+    REQUIRE( Factorial(2) == 2 );
+    REQUIRE( Factorial(3) == 6 );
+    REQUIRE( Factorial(10) == 3628800 );
+}
+```
+
+</div>
+</div>
+
+---
+# Other Good Test Frameworks
+
+<div class="twocolumns">
+<div>
+
+* [DocTest](https://github.com/onqtam/doctest/blob/master/doc/markdown/tutorial.md)
+    + easy to set up, one header only
+    + good choice for small/quick projects
+    + approach allows for well-structured, self-documenting tests
+    + very good and concise documentation
+    + BSL-1.0
+    +[Tutorial](https://github.com/onqtam/doctest/blob/master/doc/markdown/tutorial.md) [Manual](http://bit.ly/doctest-docs) [Quick Example](https://hackingcpp.com/cpp/diagnostics.html#doctest)
+
+</div>
+<div>
+
+* [Google Test](https://github.com/google/googletest)
+    + likely the [most used unit test framework](https://www.jetbrains.com/lp/devecosystem-2022/cpp/#Which-unit-testing-frameworks-do-you-regularly-use).
+    + Robust, scales well, a solid choice
+
+* [Boost Test](https://github.com/boostorg/test)
+    + Well structured basic unit test, cosider it if you use the Boost library
+
+</div>
+</div>
+
+---
+# Mocking
+
+* Mocking is useful when you have an interface, either with virtual methods or via template argument (formalized with Concepts or not), and you want to test the code that uses it.
+* from Pragmatic Unit Testing
+* When the real object
+    * produces unpredictable results, like a stock-market quote feed, or has nondeterministic behavior.
+    * is difficult to set up, or is slow.
+    * has hard to trigger behavior. For example, a network  error or out-of-memory condition
+    * The real object has or is a user interface.
+    * does not yet exist
+* When the test needs to ask the real object about how it was used.
+* Dangers:
+    * is stateful and pushes toward stateful APIs (especially if you write test before implementing)
+    * a stateless API is normally better if possible     
+
+---
+
+# Mocking libraries
+
+* You can create a mock object that returns a predetermined response for given calls, and checks that given methods are called (potentially checking the sequence and the arguments of the call).
+* Mocking libraries as the following help you doing that
+* [trompeloeil](https://github.com/rollbear/trompeloeil)
+    * A thread-safe header-only mocking framework for C++11/14
+    * a good choice for example with catch2
+    * Boost Software License 1.0
+* [Google Mock](https://github.com/google/googletest/tree/main/googlemock)
+    + a stable well rounded mocking library. 
+    + now part of google test, obvious choice if you use google test.
+
+---
+# Conclusions
+
+* C++ has a rich ecosystem, take advantage of it
+* Use compilers that support the newer standard versions and more checks
+* Make sure that building is possible with a single commands and iteration is quick
+* consider using package managers to install your dependencies and to share your libraries
+* Consult web resources to stay up to date, lookup references and quickly check code snippets
+* Use an Editor/IDE that understands C++ and helps you understand and refactor your code
+* use a code formatter to keep your code consistently and nicely formatted and easy to read without spending too much time on it
+* write tests, they help you to be confident that your code works, and that changes do not break your program
+* set up CI to continuosly and automatically
+    * build and run tests
+    * also with sanitizers, analyzers and benchmarks
+* when required use profilers to find places to optimize and debugger to identify bugs
+
+---
+# Exercises
+
+* set up and editor with `clangd`, and make sure that the `compile_commands.json` file is visible to it
+* add the dependencies of your project with a package manager, so that you can install all of them with a single command
+* If your project is a library try to make it available via a package manager
+* add some tests (using `catch2`, or another library)
+* add CI to your project if it doesn't have it yet
+    * add a build stage
+    * execute the tests
+    * do the same also with sanitizers
+* build an optimized (but with debug info) single processor application (but possibly multithreaded) and profile it with
+    * `gprofng`/`instruments` (realtime sampling)
+    * `valgrind` and `q/kcachegrind` (exact, but *much* slower)
+    * `coz` (~realtime, requires some modifications to set the range unit, you can use sample applications)
