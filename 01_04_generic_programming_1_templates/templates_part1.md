@@ -360,11 +360,11 @@ namespace two {
 ```c++
     template <typename T> 
     class thing {
+        using type = T;
         T member;
         std::unique_ptr<T> other;
         T operator()(T a, T b) const {...}
     };
-
     int main() {
       thing<int> x;
       thing<double> y;
@@ -706,6 +706,92 @@ output : `i d A` `i f A` `i d 65`
 
 ---
 
+## Alias templates
+  
+<div class="twocolumns">
+<div>
+
+* typedefs on steroids!
+  * But they are still really just typedefs
+
+```c++
+      using integer_type = int;
+      // same as
+      typedef int integer_type;
+  ```
+
+</div>
+<div>
+
+* But you can template them, which is really helpful
+
+  ```c++
+    // create an alias for a std::vector
+    template <typename T> 
+    using my_type = std::vector<T>;
+
+    // and then later on
+    my_type<double> x(100);    
+  ```
+
+</div>
+</div>
+
+* Many template arguments and defaults are allowed
+
+  ```c++
+    // create an alias for an STL-like container (which is itself templated) 
+    template <template <typename, typename> typename T, typename U,
+            template <typename> typename Alloc = std::allocator>            
+    using my_container = T<U, Alloc<U>>;
+
+    my_container<std::vector, int> x(100); 
+
+    // you can fill in (for example) an allocator to save the user doing it
+    std::vector<int, std::allocator<int>>
+  ```
+
+---
+
+## Alias templates (it's an alias, not a new type)
+
+```c++
+template <typename T>
+using my_vec = std::vector<T, my_allocator<T>>;
+
+template <typename T> // defintion 1
+std::size_t size_of(my_vec<T> const& v) { return v.size(); }
+
+template <typename T> // defintion 2 - this is the same as 1
+std::size_t size_of(std::vector<T, my_allocator<T>> const& v) {
+    return v.size();
+}
+```
+
+`error: redefinition of 'size_of' std::size_t size_of(std::vector<T, my_allocator<T>> const& v)`
+
+---
+
+## Alias templates (it's an alias, not a new type)
+
+```c++
+  template <template <typename, typename> class V>  // 3
+  std::size_t size_of(V<int, std::allocator<int>> const& v) { return v.size(); }
+
+  template <template <typename> class V>            // 4
+  std::size_t size_of(V<int> const&v) { return v.size(); }
+
+  int main() {
+      std::cout << size_of(my_vec<int>(23,0)) << std::endl; // uses 3, 4 doesn't match
+  }
+```
+
+* even though we've aliased the vector to a single template param, it really still has 2, using #4 we get  
+
+  `template template argument has different template parameters than its corresponding template template parameter`
+
+---
+
 ## Default Template Arguments and Specializations
 
 * Which specialization applies
@@ -731,6 +817,41 @@ int main() {
 
 ---
 
+## Specialization - Trickier selection
+
+```c++
+    template <typename T, typename U = int>
+    struct X {
+        X() {
+            std::cout << "Primary " << typeid(T).name() << " "  << typeid(U).name() << "\n";
+        }
+    };
+    template <typename T>
+    struct X<T, typename T::extra_type> {      
+        X() {
+            std::cout << "Specialization " << typeid(T).name() << " " << typeid(typename T::extra_type).name() << "\n";
+        }
+    };
+    struct A { using value_type = int; };
+    struct B { using extra_type = int; };
+    struct C { using extra_type = float; };
+    struct D { using extra_type = char; };
+    int main() {
+        X<A> a;         // uses primary - A::value_type not a match
+        X<B> b;         // uses specialization - B::extra_type = int
+        X<C> c;         // uses primary - C::extra_type not int
+        X<B,char> b1;   // uses primary - B::extra_type not char
+        X<D,char> d;    // uses specialization, D::extra_type = char
+    }
+```
+
+`Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
+
+* **use specialization If `T::extra_type` matches `U`**
+* [Compiler explorer link](https://godbolt.org/z/nz7n67roe) : [More advanced link](https://godbolt.org/z/bovaf1P8T)
+
+---
+
 ## SFINAE
 
 * **Substitution Failure Is Not An Error**
@@ -753,44 +874,6 @@ int main() {
 * When it succeeds, it becomes a candidate for specialization/lookup
 * "concepts" and "constexpr if" can/will mostly do away with SFINAE
   * but tons of existing code still uses it
-
----
-
-## Specialization in Action
-
-```c++
-    template <typename T, typename U = int>
-    struct X {
-        X() {
-            std::cout << "Primary " << typeid(T).name() << " "  << typeid(U).name() << "\n";
-        }
-    };
-
-    template <typename T>
-    struct X<T, typename T::extra_type> {      
-        X() {
-            std::cout << "Specialization " << typeid(T).name() << " " << typeid(typename T::extra_type).name() << "\n";
-        }
-    };
-
-    struct A { using value_type = int; };
-    struct B { using extra_type = int; };
-    struct C { using extra_type = float; };
-    struct D { using extra_type = char; };
-
-    int main() {
-        X<A> a;         // uses primary - A::value_type not a match
-        X<B> b;         // uses specialization - B::extra_type = int
-        X<C> c;         // uses primary - C::extra_type not int
-        X<B,char> b1;   // uses primary - B::extra_type not char
-        X<D,char> d;    // uses specialization, D::extra_type = char
-    }
-```
-
-`Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
-
-* use specialization If `T::extra_type` matches `U`
-* [Compiler explorer link](https://godbolt.org/z/nz7n67roe) : [More advanced link](https://godbolt.org/z/bovaf1P8T)
 
 ---
 
@@ -965,7 +1048,7 @@ int main() {
 
       // CTAD allows a lambda to be passed directly in
       B b{[](int i, int j) {cout << i+j << "\n";}};
-
+            
       a.call(3,4);
       b.call(3,4);
   }    
@@ -1003,6 +1086,7 @@ int main() {
 
 </div>
 <div>
+
 * Internally, the compiler is doing the heavy lifting by deduction using the equivalent of auto-generated (function template) helpers
 
 ```c++
@@ -1022,6 +1106,180 @@ int main() {
         A<int> x(3, 3.4, 7);         // explicit T, deduced U
         auto y = make_A(3, 3.4, 7);  // function template argument deduction 
         auto z = make_A(y);          // copy usnng the same mechanism
+    }
+```
+
+</div>
+</div>
+
+```c++
+    std::shared_ptr ptr(new int(10)); // <sigh>
+```
+
+---
+
+## auto keyword
+
+<div class="twocolumns">
+<div>
+
+```c++
+// forward declarations to keep compiler happy
+struct thing1;
+struct thing2 {
+    double val{3.14};
+    thing1 operator + (const thing1& t1) const;
+};
+
+struct thing1 {    
+    double val{3.14};
+    auto operator + (const thing2& t2) const
+    {   
+        return thing2{t2.val + val};
+    }
+};
+
+thing1 thing2::operator + (const thing1& t1) const {
+    return thing1{t1.val + val};
+}
+```
+
+</div>
+<div>
+
+```c++
+int main()
+{
+    thing1 t1{3.14};
+    thing2 t2{6.28};
+    auto r1 = t1 + t2;
+    auto r2 = t2 + t1;
+    std::cout << typeid(r1).name() << std::endl;
+    std::cout << typeid(r2).name() << std::endl;
+}
+```
+
+`6thing2` `6thing1`
+
+</div>
+</div>
+
+* When functions return unexpected or difficult to guess types (especially types derived from operations on other unknown types) - the auto keyword becomes essential
+
+---
+
+## Variadic Templates
+
+* A template parameter pack accepts zero or more arguments
+  * Using `...` to express packs
+
+```c++
+    // a function tanking zero or more arguments 
+    template <typename... Ts> // parameter pack (the types) 
+    void foo(Ts... args) {}   // parameter pack (the actual values)
+
+    // a class templated over zero or more types
+    template <typename... Ts>
+    class A {};
+```
+
+```c++
+    template <typename... Ts>
+    void foo(Ts... args) {  
+        function(args...);  // pack-expansion = arg1, arg2, arg3 ...
+        pattern(args)...;   // pack-expansion = pattern(arg1), pattern(arg2) ... 
+        function(&args...); // pack-expansion = function(&arg1, &arg2, &arg3 ...); 
+    }
+```
+
+* Whatever the `...` appears after is the thing that is being repeated
+
+---
+
+## Placement of the Variadic Dots `...`
+
+* It may at first seem confusing where to put the `...` dots
+* The dots come **after** whatever is being repeated
+  * Multiple typenames will be  
+
+    ```c++
+    template <typename... Ts>
+    ```
+
+  * The args types `Ts` will be a list (derived from the args)  
+
+    ```c++
+    void foo(Ts... args) {}
+    ```
+
+  * The **thing** before the `...` will be expanded to make a list
+
+    ```c++
+      pattern(args)...;
+    ```
+
+* :) If you see ...
+
+  ```c++
+    template <typename ...Ts>
+    void foo(Ts ...args) {}
+  ```
+
+---
+
+## Variadics - Recursion in action
+
+```c++
+    void pretty_print(std::ostream& s) {
+        s <<"\n";
+    }
+    
+    template <typename T, typename... Ts>
+    void pretty_print(std::ostream& s, T first, Ts... values) {
+        s << " {" << first << "} ";
+        pretty_print(s, values...);
+    }
+
+    int main(){
+        pretty_print(std::cout, 3.2, "hello", 42, "world");
+    }
+```
+
+[Compiler Explorer link](https://godbolt.org/z/QTU3Uz)
+
+---
+
+## C++17 Fold Expressions
+
+* More elaborate pack-expansions (reductions on packs)
+* 4 Flavours of Fold
+  * Unary Right Fold
+    * `(pack op ...)`
+  * Unary Left Fold:=
+    * `(... op pack)`
+  * Binary Right Fold
+    * `(pack op ... op init)`
+  * Binary Left Fold
+    * `(init op ... op pack)`
+  * op may be one of the following (commonly overloaded) operators
+    * `* + - * / % ^ & | = < >`  
+    * `<< >> += -= *= /= %= ^= &= |= <<= >>= == != <= >= && ||`  
+    * ` , .* ->* `  
+
+---
+
+## Unary Left Fold example
+
+```c++
+    template <typename... Args> 
+    bool all(Args... args) {
+        return (... && args);
+    }
+      
+    int main()
+    {
+        bool b = all(true, true, true, false);
+        std::cout << "Result: " << std::boolalpha << b << std::endl;
     }
 ```
 
@@ -1196,196 +1454,6 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
         int x = 1;
         with_ref<true>(x);
         with_ref<false>(x);
-    }
-```
-
----
-
-## Alias templates
-
-* typedefs on steroids!
-  * But they are still really just typedefs
-  
-  ```c++
-      using integer_type = int;
-      // same as
-      typedef int integer_type;
-  ```
-
-  * But you can template them, which is really helpful
-
-  ```c++
-    // create an alias for a std::vector  
-    template <typename T> 
-    using my_type = std::vector<T>;
-
-    // and then later on
-    my_type<double> x(100);    
-  ```
-
-* Many template arguments and defaults are allowed
-
-  ```c++
-    // create an alias for an STL-like container (which is itself templated) 
-    template <template <typename, typename> typename T, typename U,
-            template <typename> typename Alloc = std::allocator>            
-    using my_container = T<U, Alloc<U>>;
-
-    my_container<std::vector, int> x(100);
-  ```
-
----
-
-## Alias templates (it's an alias, not a new type)
-
-```c++
-template <typename T>
-using my_vec = std::vector<T, my_allocator<T>>;
-
-template <typename T> // defintion 1
-std::size_t size_of(my_vec<T> const& v) { return v.size(); }
-
-template <typename T> // defintion 2 - this is the same as 1
-std::size_t size_of(std::vector<T, my_allocator<T>> const& v) {
-    return v.size();
-}
-```
-
-`error: redefinition of 'size_of' std::size_t size_of(std::vector<T, my_allocator<T>> const& v)`
-
----
-
-## Alias templates (it's an alias, not a new type)
-
-```c++
-template <template <typename, typename> class V>  // 3
-std::size_t size_of(V<int, std::allocator<int>> const& v) { return v.size(); }
-
-template <template <typename> class V>            // 4
-std::size_t size_of(V<int> const&v) { return v.size(); }
-
-int main() {
-    std::cout << size_of(my_vec<int>(23,0)) << std::endl; // uses 3, 4 doesn't match
-}
-```
-
-* even though we've aliased the vector to a single template param, it really still has 2, using #4 we get  
-  `template template argument has different template parameters than its corresponding template template parameter`
-
----
-
-## Variadic Templates
-
-* A template parameter pack accepts zero or more arguments
-  * Using `...` to express packs
-
-```c++
-    // a function tanking zero or more arguments 
-    template <typename... Ts> // parameter pack (the types) 
-    void foo(Ts... args) {}   // parameter pack (the actual values)
-
-    // a class templated over zero or more types
-    template <typename... Ts>
-    class A {};
-```
-
-```c++
-    template <typename... Ts>
-    void foo(Ts... args) {  
-        function(args...);  // pack-expansion = arg1, arg2, arg3 ...
-        pattern(args)...;   // pack-expansion = pattern(arg1), pattern(arg2) ... 
-        function(&args...); // pack-expansion = function(&arg1, &arg2, &arg3 ...); 
-    }
-```
-
-* Whatever the `...` appears after is the thing that is being repeated
-
----
-
-## Placement of the Variadic Dots `...`
-
-* It may at first seem confusing where to put the `...` dots
-* The dots come **after** whatever is being repeated
-  * Multiple typenames will be  
-
-    ```c++
-    template <typename... Ts>
-    ```
-
-  * The args types `Ts` will be a list (derived from the args)  
-
-    ```c++
-    void foo(Ts... args) {}
-    ```
-
-  * The **thing** before the `...` will be expanded to make a list
-
-    ```c++
-      pattern(args)...;
-    ```
-
-* :) If you see ...
-
-  ```c++
-    template <typename ...Ts>
-    void foo(Ts ...args) {}
-  ```
-
----
-
-## Recursion in action
-
-```c++
-    void pretty_print(std::ostream& s) {
-        s <<"\n";
-    }
-    
-    template <typename T, typename ...Ts>
-    void pretty_print(std::ostream& s, T first, Ts ...values) {
-        s << " {" << first << "} ";
-        pretty_print(s, values...);
-    }
-
-    int main(){
-        pretty_print(std::cout, 3.2, "hello", 42, "world");
-    }
-```
-
-[Compiler Explorer link](https://godbolt.org/z/QTU3Uz)
-
----
-
-## C++17 Fold Expressions
-
-* More elaborate pack-expansions (reductions on packs)
-* 4 Flavours of Fold
-  * Unary Right Fold
-    * `(pack op ...)`
-  * Unary Left Fold:=
-    * `(... op pack)`
-  * Binary Right Fold
-    * `(pack op ... op init)`
-  * Binary Left Fold
-    * `(init op ... op pack)`
-  * op may be one of the following (commonly overloaded) operators
-    * `* + - * / % ^ & | = < >`  
-    * `<< >> += -= *= /= %= ^= &= |= <<= >>= == != <= >= && ||`  
-    * ` , .* ->* `  
-
----
-
-## Unary Left Fold example
-
-```c++
-    template <typename... Args> 
-    bool all(Args... args) {
-        return (... && args);
-    }
-      
-    int main()
-    {
-        bool b = all(true, true, true, false);
-        std::cout << "Result: " << std::boolalpha << b << std::endl;
     }
 ```
 
