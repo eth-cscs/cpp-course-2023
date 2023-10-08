@@ -11,4 +11,3 @@ target_sources(03_01_nbody
 
 target_compile_options(03_01_nbody PRIVATE ${CPP_COURSE_MATH_NO_ERRNO_OPTION})
 target_compile_options(03_01_nbody PRIVATE ${CPP_COURSE_AVX_OPTION})
-target_compile_options(03_01_nbody PRIVATE "-fno-vectorize")
