@@ -18,7 +18,7 @@ size: 16:9
 
 #### CSCS
 
---- 
+---
 
 # C++ standardization process
 
@@ -32,17 +32,36 @@ size: 16:9
   - "(Library) Evolution Working Group" evaluates how well the design fits C++ as a whole
   - "Core/Library Working Group" evaluates wording
   - Full committee vote with "National Bodies" (NB)
-- [More information](https://isocpp.org/std)
 
 </div>
 <div>
-  
+
 ![w:900](https://isocpp.org/files/img/wg21-structure-2022-12.png)
 
 </div>
 </div>
 
---- 
+---
+
+# C++ standardization process
+
+<div class="twocolumns">
+<div>
+
+- [More information](https://isocpp.org/std)
+- Draft of the standard available at https://eel.is/c++draft
+- Proposals available at https://www.open-std.org/jtc1/sc22/wg21/docs/papers/
+- https://wg21.link/P0000 takes you to the latest revision of proposal P0000
+
+</div>
+<div>
+
+![w:900](https://isocpp.org/files/img/wg21-structure-2022-12.png)
+
+</div>
+</div>
+
+---
 
 # Moving to newer standards
 
@@ -61,12 +80,31 @@ size: 16:9
 
 - The past sessions have covered advanced C++ topics up to C++23
 - Features that didn't fit previous sessions, but are good to know about:
+  - modules
   - `std::format` and `std::print`
   - `std::expected`
 - Features useful for HPC that are targeted for C++26:
   - `std::execution`
   - `std::simd`
   - `std::linalg` + `std::mdspan`
+
+---
+
+# Modules
+
+- Problem: header includes error prone and slow
+  - "Stateful" headers possible with macros
+  - Parsing transitive headers may be very expensive (https://github.com/s9w/cpp-lit): simply enabling C++20 may increase compilation times!
+- C++ modules (C++20) moves away from textual inclusion to a model where exports are explicit, macros don't leak, and build times aren't insane (though they can still be insane because of templates)
+- GCC 14, clang 16, and CMake ~3.26 are starting to have usable (but experimental) support for modules
+  - https://godbolt.org/z/von5MfK7T
+  - CMake 3.28 (unreleased) will have non-experimental support for modules: https://gitlab.kitware.com/cmake/cmake/-/issues/18355
+- The modules `std` and `std.compat` were added in C++23
+
+```c++
+import std;
+auto main() -> int { std::println("Hello, world!"); }
+```
 
 ---
 
@@ -138,6 +176,23 @@ auto [i] = this_thread::sync_wait(add_42).value();
 - CSCS developing [pika](https://github.com/pika-org/pika): builds functionality on top of `std::execution`
 - Targeted for C++26
 - Proposal: https://wg21.link/p2300
+- stdexec is available on compiler explorer: https://godbolt.org/z/T3MqhPGex
+
+---
+
+# `std::execution`: not only for asynchrony
+
+- Schedulers (executors) finally get us a step closer to heterogeneous execution of parallel algorithms
+- Blocking overloads of parallel algorithms much simpler to reason about
+- Proposal: https://wg21.link/p2500
+
+```c++
+std::for_each(
+    std::execute_on(scheduler, std::execution::par),
+    begin(data),
+    end(data),
+    f);
+```
 
 ---
 
@@ -155,6 +210,7 @@ auto [i] = this_thread::sync_wait(add_42).value();
 - Execution policies for parallelization
 - GPU support dependent on `std::execution` support for parallel algorithms
 - Targeted for C++26
+- Only covers BLAS, not LAPACK
 - Proposal: https://wg21.link/p1673
 
 ---
@@ -212,3 +268,7 @@ sender auto s = std::execution::when_all(a, b, c) |
     std::execution::then([]() { std::print("matrix-matrix multiplication done\n"); });
 std::this_thread::sync_wait(s);
 ```
+
+---
+
+# Thank you!

@@ -50,6 +50,32 @@ Consequence:
 
 ---
 
+# Comparison to OOP
+
+<div class="twocolumns">
+<div>
+
+## Object oriented approach
+
+- I'll make an n-body simulation
+- Let's have a `Body` class
+- Let's add a method to calculate gravitational force towards another `Body`
+- Let's create a `Simulation` class to encapsulate all the bodies
+
+</div>
+<div>
+
+## Data oriented approach
+
+- I'll make an n-body simulation
+- Let's have a function that calculates the pairwise gravitational forces
+- Let's figure out the input and output to this function
+- Let's lay out the inputs and outputs nicely in memory
+
+</div>
+</div>
+
+---
 
 # Theory: memory hierarchy of modern systems
 
@@ -81,8 +107,8 @@ Consequence:
 - Burst mode:
     - You would normally get 64 bits of data
     - The DRAM can give you 8 consecutive blocks of 64 bits too
-    - You don't need to wait between the 8 data packets, they come quickly after each other
-    - That makes a chunks of 8x 64 bits == 64 bytes (remember that number!)
+    - You don't need to wait between the 8 data packets, they come quickly after each other (in a *burst*)
+    - That makes chunks of 8x 64 bits == 64 bytes being read at once
 - Pretty much the same goes for writes
 
 ---
@@ -103,8 +129,8 @@ int64_t sum_every_8th(std::span<int64_t> values) {
     return sum;
 }
 ```
-
-**TODO: add illustration**
+<br>
+<img src="./images/dram_every_8th.drawio.svg" alt="dod_nbody_example" title="" width="35%"/>
 
 ---
 
@@ -119,16 +145,14 @@ int64_t sum_all(std::span<int64_t> values) {
     int64_t sum = 0;
     for (size_t idx = 0; idx < (values.size() & ~7u); idx += 8) {
         // Pairwise sum of all elements in a block of 8.
-        sum += ((values[idx + 0] + values[idx + 1])
-                + (values[idx + 2] + values[idx + 3]))
-               + ((values[idx + 4] + values[idx + 5])
-                  + (values[idx + 6] + values[idx + 7]));
+        sum += ((values[idx + 0] + values[idx + 1]) + (values[idx + 2] + values[idx + 3]))
+               + ((values[idx + 4] + values[idx + 5]) + (values[idx + 6] + values[idx + 7]));
     }
     return sum;
 }
 ```
-
-**TODO: add illustration**
+<br>
+<img src="./images/dram_all_elements.drawio.svg" alt="dod_nbody_example" title="" width="35%"/>
 
 ---
 
@@ -172,7 +196,7 @@ Test method:
 - No address is read twice all throughout -- we measure pure DRAM, not cache
 - Explicitly prefetch addresses (explained later) -- we measure DRAM, not HW prefetcher
 
-**TODO: Illustration of memory region split into blocks + accesses**
+<img src="./images/dram_block_reads.drawio.svg" alt="dod_nbody_example" title="" width="65%"/>
 
 ---
 
@@ -191,7 +215,7 @@ Test method:
 
 ## Randomized access
 
-<img src="./images/dram_block_size_random.svg" alt="dod_nbody_example" title="" width="100%"/> 
+<img src="./images/dram_block_size_random.svg" alt="dod_nbody_example" title="" width="100%"/>
 
 </div>
 </div>
@@ -303,7 +327,7 @@ Modern CPUs typically emply 3 levels of caching:
 <div>
 
 **Replacement policies**:
-- Once the cache is full, we cannot put more entries
+- Once the cache is full, we cannot put more entries in it
 - We must remove some entries to free up space
 - Which entry should we remove?
   - Many strategies
@@ -322,7 +346,7 @@ Modern CPUs typically emply 3 levels of caching:
 1. CPU #1 writes data into its own L1 cache and invalidates this address in all other caches
 2. CPU #2 writes data into its own L1 cache and invalidates this address in all other caches
 3. CPU #3 reads address that is cached in CPU #2's L1 cache
-    - The data is then flushed to the shared L3 cache
+    - As a result data is flushed to the shared L3 cache
     - CPU #3 retrieves the data from the L3 cache
 
 **Practical implementations**: there are different methods to implement cache coherence in modern, multi-core CPUs. We will not examine exact implementations, as it's not strictly necessary to understand the main principles.
@@ -334,7 +358,7 @@ Modern CPUs typically emply 3 levels of caching:
 Test method:
 - Allocate a memory block of certain size
 - Keep reading that block repeatedly
-- This should move and keep the block in cache when possible
+- This should keep the block in cache if it fits
 - Observe performance
 
 ---
@@ -358,7 +382,7 @@ Test method:
     - The data becomes too big to fit in L2
     - Must use slower L3 cache
 - We see a dip at 64 MiB too
-    - The data becomes too bit to fit in L3
+    - The data becomes too big to fit in L3
     - Must use slower DRAM
 - What about L1 and a dip at 32 KiB?
     - Maybe we are already be ALU-bound
@@ -377,11 +401,11 @@ Test method:
 - Remember *cache lines*?
     - All the physical memory is split into cache lines
     - You cannot pull just part of a cache line into the caches
-- What if two CPU cores write the same cache line?
-    - The writes go into each CPUs local L1 cache
-    - Coherence: the writes get serialized, which forces them into L3
+- What if two CPU cores read-modify-write the same cache line?
+    - The writes normally go into each CPUs local L1 cache
+    - Coherence: concurrent reads force the written data to be flushed into L3
     - **False sharing**: The CPUs don't have to write the exact same address, it's enough if the addresses share a cache line.
-    - **Example**: You have an `std::array<int, 2> a;`, one CPU core is writing `a[0]` while the other is writing `a[1]`. Since the two elements (almost always) share a cache line, this results in false sharing.
+    - **Example**: You have an `std::array<int, 2> a;`, one CPU core is updating `a[0]` while the other is updating `a[1]`. Since the two elements (almost always) share a cache line, this results in false sharing.
     - **Note**: the CPUs don't actually share any data, this is why it's called *false* sharing.
 
 ---
@@ -396,8 +420,6 @@ So how bad is false sharing?
 - Sum each batch in a new thread
 - Sum the partial results
 - **False sharing**: put each thread's accumulator in the same cache line!
-
-TODO: illustration of batches and accumulators
 
 ---
 
@@ -478,7 +500,7 @@ TODO: illustration of batches and accumulators
 # Theory: the prefetcher (2)
 
 - In fact, this is how modern CPUs actually work
-- They try to predict memory access patterns and data to cache before it's requested
+- They try to predict memory access patterns and move data to cache even before it's requested
 
 <div class="tworows">
 <div>
@@ -507,7 +529,7 @@ TODO: illustration of batches and accumulators
 
 You can do it in two ways:
 1. Access memory in predictable patterns
-    - Sequential access is always a hit
+    - Sequential access is always a good idea
     - Otherwise, measure
 2. Issue explicit `PREFETCHT0` or similar instructions
     - Not super portable
@@ -554,6 +576,94 @@ Play your data into the hands of the hardware prefetcher. If you can't, consider
 
 ---
 
+# Practical memory handling in C++ (1)
+
+## Overaligned memory
+
+**Alignment:** memory address of a variable must be a multiple of X bytes.
+
+<div class="twocolumns">
+<div>
+
+**Why?**
+- SIMD types: aligned load and store may be faster
+- Align to cache lines: to avoid false sharing
+- GPU memory: may help texture units or texture cache
+
+</div>
+<div>
+
+**How?**
+- `alignof` keyword: like `sizeof`, but gives you the alignment
+- `alignas` keyword: specified the alignment of a type/object
+- `std::aligned_alloc`: like `malloc`, but with specific alignment
+- `operator new` / `operator delete`: can now handle overaligned types
+
+</div>
+</div>
+
+---
+
+# Practical memory handling in C++ (2)
+
+## Overaligned memory: example
+
+Consider a vector class suitable for SSE:
+```c++
+struct Vec4 {
+    alignas(16) float elements[4];
+};;
+```
+
+Now you may safely use aligned loads and stores:
+```c++
+Vec4 v; // Our custom vector type
+const auto reg1 = _mm_load_ps(v.elements); // aligned, always fast
+const auto reg2 = _mm_loadu_ps(v.elements); // unaligned, may be slower
+```
+
+Dynammically allocating `Vec4`s also respects the alignment specification:
+```c++
+auto* const vectors = new Vector[1337];
+delete[] vectors;
+```
+
+---
+
+# Practical memory handling in C++ (3)
+
+## Cache lines
+
+- The size of cache lines may be different on different hardware
+- Luckily, C++ has:
+    - `std::hardware_destructive_interference`: *minimum offset between two objects to avoid false sharing"* (from cppreference)
+    - `std::hardware_constructive_interference`: *"maximum size of contiguous memory to promote true sharing"* (from cppreference)
+- Unfortunately...
+    - They are not supported in libstdc++
+    - You have to #ifdef them to a fallback value in reality
+
+---
+
+# Remarks
+
+- There have been announcments that OOP is dead...
+- Data oriented design is just another tool
+
+**Can I still use OOP?**
+- Yes, and you should
+- It's very intuitive and often help with clean code
+
+**When to use DoD?**
+- When it improves your performance
+- Sometimes it even makes your code cleaner!
+
+**Are DoD and OOP exclusive?**
+- No, you can mix them as you see fit
+
+Performance and readability are two different goals, and often one is traded for the other.
+
+---
+
 # References
 
 - https://www.techpowerup.com/cpu-specs/pentium-ii-xeon-400.c2962
@@ -563,6 +673,7 @@ Play your data into the hands of the hardware prefetcher. If you can't, consider
 - https://www.agner.org/optimize/instruction_tables.pdf
 - https://www.intel.com/content/www/us/en/developer/articles/technical/memory-performance-in-a-nutshell.html
 - https://compas.cs.stonybrook.edu/~nhonarmand/courses/sp15/cse502/res/dramop.pdf
+- https://en.cppreference.com/w/
 
 ---
 
@@ -580,59 +691,12 @@ Get the slides and full source code on GitHub:
 
 ---
 
-# END OF PRESENTATION
+# Potential to do list
 
----
-
-# How to write slides
-Split pages by horizontal ruler (`---`). It's very simple! :satisfied:
-
-```markdown
-# Slide 1
-
-foobar
-
----
-
-# Slide 2
-
-foobar
-```
-
----
-
-# A Slide with two columns
-
-<div class="twocolumns">
-<div>
-
-## Code
-
-```c++
-void f(int x) {
-}
-```
-
-</div>
-<div>
-
-## Explanations
-
-declaration of a function f...
-
-</div>
-</div>
-
----
-
-# Testing Math
-
-Writing an expression here:  $ax^2+bx+c$
-
-$$ I_{xx}=\int\int_Ry^2f(x,y)\cdot{}dydx $$
-
-$$
-f(x) = \int_{-\infty}^\infty
-    \hat f(\xi)\,e^{2 \pi i \xi x}
-    \,d\xi
-$$
+- Talk about how C++ helps dealing with memory (layouts, padding, alignment, numa?, etc.)
+  - `alignas`
+  - `aligned_alloc` (not supported everywhere)
+  - `hardware_*_interference_size` (requires definition sometimes)
+  - class layout (padding for alignment)
+  - padding for cache lines
+  - not C++: but first touch? bonus...

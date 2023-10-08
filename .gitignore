@@ -3,5 +3,6 @@
 *.pdf
 build/
 .cache/
-.vscode/
+/.vscode
 .venv/
+compile_commands.json
