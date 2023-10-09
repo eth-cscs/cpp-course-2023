@@ -11,8 +11,11 @@ on:
 
 jobs:
   mytest:
-    run: |
-      echo "It works!"
+    name: publish slides
+    steps:
+    - name: "publishing"
+      shell: bash
+      run: echo "It works!"
   #   # # Build job
   #   # build:
   #   #   # <Not provided for brevity>
