@@ -50,18 +50,18 @@ jobs:
           # For the moment we just PDF slides, because HTML have problem with images urls
           cp ./*.pdf ./slides/
 
-      - name: Generate index
+      - name: Generate GitHub Pages index
         if: github.ref_name == 'publish_pdfs'
-        working-directory: ${{runner.workspace}}/slides/
+        working-directory: ${{runner.workspace}}/build/slides/
         shell: bash
         run: |
           find . -name "*.pdf" -exec "<a href='{}'>{}</a>" \; > index.html
 
-      - name: Publish artifact with mock-slides
+      - name: Publish artifact with slides to GitHub Pages
         if: github.ref_name == 'publish_pdfs'
         uses: actions/upload-pages-artifact@v2
         with:
-          path: "slides/"
+          path: "build/slides/"
 
   # Deploy job
   deploy:
