@@ -43,7 +43,7 @@ endif()
 # Day 1
 add_subdirectory(01_01_introduction)
 add_subdirectory(01_02_infrastructure_resources)
-add_subdirectory(01_03_initialization_etc)
+add_subdirectory(01_03_raii_move-semantics)
 add_subdirectory(01_04_generic_programming_1_templates)
 
 # Day 2
