@@ -61,7 +61,7 @@ jobs:
         if: github.ref_name == 'publish_pdfs'
         uses: actions/upload-pages-artifact@v2
         with:
-          path: "build/slides/"
+          path: "${{runner.workspace}}/build/slides/"
 
   # Deploy job
   deploy:
