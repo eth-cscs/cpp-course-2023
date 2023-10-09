@@ -34,7 +34,6 @@ size: 16:9
 
 ```c++
     int add(int x, int y) { return x + y; }
-
     int main() { add(65, 35); }
 ```
 
@@ -46,12 +45,13 @@ size: 16:9
     struct name2; //                        public 
 
     class name1 {
-        // insert interesting things here ...
+        // insert more interesting things here ...
         int thing1;
-        int thing2(float);
+        int func2(float) { ... };
     };
-    // here we instantiate a variable of type 'name1'
-    int main() { name1 x; }
+    int main() { 
+      name1 x; // here we instantiate a variable of type 'name1' 
+    }
 ```
 
 ---
@@ -89,7 +89,7 @@ size: 16:9
 * Overloading functions is quite normal, regardless of templates
 * It's a form of specialization/customization of the function itself
 * Note: Functions can't be overloaded based on return type alone
-  * introduces ambiguities due to type conversions
+  * introduces ambiguities (+ problems with type conversions)
 
 ```c++
     void function1(int x);
