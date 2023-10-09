@@ -99,7 +99,7 @@ Us:
 * Overloading functions is quite normal, regardless of templates
 * It's a form of specialization/customization of the function itself
 * Note: Functions can't be overloaded based on return type alone
-  * introduces ambiguities (+ problems with type conversions)
+  * introduces ambiguities (+ problems with return type conversions)
 
 ```c++
     void function1(int x);
@@ -1261,6 +1261,21 @@ int main()
 
 ---
 
+## Perfect Forwarding
+
+* Preserves the type of the argument(s)
+* const stays const,
+* refs stay refs
+* all modifiers are preserved when forwarding the arguments 
+
+```c++
+      template <typename... Args>
+      void call(Args&&... args) {
+          f(std::forward<Args>(args)...);
+      }
+```
+---
+
 ## C++17 Fold Expressions
 
 * More elaborate pack-expansions (reductions on packs)
@@ -1305,12 +1320,9 @@ int main()
 
 ## Pretty print using fold
 
-* Using a unary left fold
-
 ```c++
     template<typename... Ts>
-    void print1(Ts... vals)
-    {
+    void print1(Ts... vals) {
         (std::cout << ... << vals);
     }
 ```
@@ -1319,13 +1331,11 @@ int main()
 
 ```c++
     template<typename... Ts>
-    void print2(const char *delim, Ts... vals)
-    {
+    void print2(const char *delim, Ts... vals) {
         auto showdelim = [](const char *delim, const auto& param) -> const auto& {
           std::cout << delim;
           return param;
         };
-
         (std::cout << ... << showdelim(delim, vals) ) << std::endl ;
     }
 ```
@@ -1333,8 +1343,7 @@ int main()
 * print1 does the right thing, but how do you add a delimiter?
 * print2 is better, but prints an extra delimiter
 * we want thr right number of delimiters and handle an empty inpput
-* see fold example code for print3
-  [link to full example](https://godbolt.org/z/hbvh78381)
+* see fold example code for print3  [link to full example](https://godbolt.org/z/hbvh78381)
 
 ---
 
@@ -1428,6 +1437,7 @@ constN<countlower("Hello, world!")> out2;
 * Single applications rarely need TMP
 * Useful when building abstraction layers
   * E.g., header-only libraries
+* ODL and headers (One definition Rule)
 
 ---
 
@@ -1441,6 +1451,7 @@ constN<countlower("Hello, world!")> out2;
   * `X::type_t<U>`
 * Visibility rules as normal
 * Constexpr variables visible at translation unit level
+* inline constexpr is your friend for const vars etc
 
 </div>
 <div>
@@ -1455,6 +1466,7 @@ constN<countlower("Hello, world!")> out2;
 
         static const int a = 10;
         static constexpr int b =10;
+        inline constexpr int c = 10;
 
         X(...);
 
@@ -1509,7 +1521,9 @@ constN<countlower("Hello, world!")> out2;
       template <Arguments…>
       struct meta_function {
           using type = ... ;
-          static constexpr … value = ... ; 
+          static constexpr ... value = ... ;
+          using result_type = ... ;
+          using param_type = ... ; 
       };
 ```
 
@@ -1523,14 +1537,14 @@ constN<countlower("Hello, world!")> out2;
 * A type for each number
 
 ```c++
-template<class T, T v>
-struct integral_constant {
-    using value_type = T ;
-    static constexpr value_type value = v;
-};
+    template<class T, T v>
+    struct integral_constant {
+        using value_type = T ;
+        static constexpr value_type value = v;
+    };
 
-// use :value to access the underlying content 
-static_assert(integral_constant<int, 7>::value == 7, “Error”)
+    // use :value to access the underlying content 
+    static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
 ```
 
