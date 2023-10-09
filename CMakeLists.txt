@@ -24,6 +24,7 @@ if (${CPP_COURSE_BUILD_SLIDES})
     include(cmake/Marp.cmake)
 endif()
 
+include(CTest)
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
