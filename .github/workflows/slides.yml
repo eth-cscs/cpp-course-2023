@@ -15,48 +15,43 @@ jobs:
   slides:
     name: slides
     runs-on: ubuntu-latest
-    
     steps:
-      # - uses: actions/checkout@v2
-      # - uses: seanmiddleditch/gha-setup-ninja@v3
+      - name:
+        shell: bash
+        run: |
+          mkdir mock-slides
+          echo "this is the content" > mock-slides/test.txt
 
-      # - name: Install dependencies
-      #   shell: bash
-      #   run: |
-      #     sudo apt update
-      #     sudo apt install chromium-browser
-      #     wget https://github.com/marp-team/marp-cli/releases/download/v3.2.1/marp-cli-v3.2.1-linux.tar.gz
-      #     tar -xf ./marp-cli-v3.2.1-linux.tar.gz
-      #     sudo ln -s $(pwd)/marp /usr/bin/marp
+      - name: Publish slides on GitHub Pages
+        if: github.ref_name == 'publish_pdfs'
+        shell: bash
+        run: echo "It works on ${{github.ref_name}}"
 
-      # - name: Create Build Environment
-      #   run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Publish artifact with mock-slides
+        if: github.ref_name == 'publish_pdfs'
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: "mock-slides/"
 
-      # - name: Configure CMake
-      #   shell: bash
-      #   working-directory: ${{runner.workspace}}/build
-      #   run: |
-      #     cmake -S $GITHUB_WORKSPACE -B . -DCMAKE_BUILD_TYPE=Debug
+  # Deploy job
+  deploy:
+    needs: slides
 
-      # - name: Build
-      #   working-directory: ${{runner.workspace}}/build
-      #   shell: bash
-      #   run: cmake --build . --config Debug
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
 
-      # - name: Copy slides
-      #   working-directory: ${{runner.workspace}}/build
-      #   shell: bash
-      #   run: |
-      #     mkdir slides
-      #     cp ./*.{pdf,html} ./slides/
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-      # - name: Archive slides
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: slides
-      #     path: ${{runner.workspace}}/build/slides
-
-    - name: Publish slides on GitHub Pages
-      if: github.ref_name == 'publish_pdfs'
-      shell: bash
-      run: echo "It works on ${{github.ref_name}}"
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2 # or the latest "vX.X.X" version tag for this action 
+        with:
+          artifact_name: 'github-pages'
