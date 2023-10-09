@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - publish_pdfs
   pull_request:
     branches:
       - master
