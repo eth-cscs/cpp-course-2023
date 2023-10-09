@@ -28,28 +28,28 @@ size: 16:9
 <div class="twocolumns">
 <div>
 
-+ compilers
-+ object utils
-+ linker
-+ build tools
-+ package managers
-+ Web resources
+* compilers
+* object utils
+* linker
+* build tools
+* package managers
+* Web resources
     + web tools
     + Textual/Documentation Resources
-+ Editors/IDEs
+* Editors/IDEs
     + remote editing
 
 </div>
 <div>
 
-+ Remote Environements
+* Remote Environements
     + containers (dev-containers)
     + gitpod
-+ sanitizers/analyzers
-+ debugger
-+ profilers
-+ Test frameworks
-+ CI
+* sanitizers/analyzers
+* debugger
+* profilers
+* Test frameworks
+* CI
 
 </div>
 </div>
@@ -225,7 +225,7 @@ build with `scons`
 
 # Don't invent your own
 - In general any code you do not have to write is a win
-- libraries can help you with code that has been used and reviewed already by others. 
+- libraries can help you with code that has been used and reviewed already by others.
 - One often underestimates the time needed until a code works well and solves the issue.
 - try to use stdlib or existing libraries
 
@@ -382,7 +382,7 @@ cmake -B [build directory] -S . \
 # Remote editing
 
 * Several editors can access code on a remote machine from the editor running on your local machine via ssh, and give you a mostly native experience.
-* Visual Studio Code [Remote development extension](https://code.visualstudio.com/docs/remote/remote-overview) has 
+* Visual Studio Code [Remote development extension](https://code.visualstudio.com/docs/remote/remote-overview) has
     + Remote - SSH - Connect to any location by opening folders on a remote machine/VM using SSH.
     + Dev Containers - Work with a separate toolchain or container-based application inside (or mounted into) a container.
     + WSL - Get a Linux-powered development experience in the Windows Subsystem for Linux.
@@ -408,7 +408,7 @@ cmake -B [build directory] -S . \
 # Code Formatters
 
 * Well and consistently formatted code makes the code easier to read, which is important, but manually formatting the code can take time, and it is difficult for many developers to be all consistent with each other. A code formatter and maybe a pre-commit hook can take care of that
-* [clang format](https://clang.llvm.org/docs/ClangFormat.html) (of llvm/clang) can be customized by a `.clang-format` file that you can add to your repository, and `git clang-format` reformats the changes you have staged, so that you can review them
+* [clang format](https://clang.llvm.org/docs/ClangFormat.html) (of llvm/clang) can be customized by a `.clang-format` file that you can add to your repository (you can generate it with the online [clang-format-configurator](https://zed0.co.uk/clang-format-configurator/)), and `git clang-format` reformats the changes you have staged, so that you can review them
 part of the llvm/clang project
 * other options:
     + [Artistic Style](http://astyle.sourceforge.net/)
@@ -420,13 +420,15 @@ part of the llvm/clang project
 * you should always use some version control software
 * [git](https://git-scm.com) is the de-facto industry standard for version control
 * little reason not to use it, we assume you do
+* set a `.gitignore`
+* commit hooks for example in a `.githooks` directory and then explain how to activate them (`git config --local core.hooksPath .githooks/`)
 
 ---
 # CI
 
 * you shoudl always try to have automatic tests, indeed you should try to use Test Driven Development (TDD).
 * automatic test on each commit (CI) help making sure that the project stays working, and failure/regressions are catched quickly
-* both gitlab and github let you set up pipelines that ensure that 
+* both gitlab and github let you set up pipelines that ensure that
 
 ---
 # Sanitizers
@@ -502,7 +504,7 @@ clang++ -fsanitize=thread
 ---
 
 # Single Process Debuggers
-* debuggers let one inspect a running program and find issues 
+* debuggers let one inspect a running program and find issues
     * [GDB](https://www.gnu.org/software/gdb) the GNU debugger
     * [lldb](https://lldb.llvm.org/) the LLVM project's debugger
     * [rr](https://rr-project.org/) records program state over time
@@ -610,7 +612,7 @@ TEST_CASE( "Factorials are computed", "[factorial]" ) {
 * When the test needs to ask the real object about how it was used.
 * Dangers:
     * is stateful and pushes toward stateful APIs (especially if you write test before implementing)
-    * a stateless API is normally better if possible     
+    * a stateless API is normally better if possible
 
 ---
 
@@ -623,7 +625,7 @@ TEST_CASE( "Factorials are computed", "[factorial]" ) {
     * a good choice for example with catch2
     * Boost Software License 1.0
 * [Google Mock](https://github.com/google/googletest/tree/main/googlemock)
-    + a stable well rounded mocking library. 
+    + a stable well rounded mocking library.
     + now part of google test, obvious choice if you use google test.
 
 ---
