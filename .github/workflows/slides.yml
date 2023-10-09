@@ -16,22 +16,52 @@ jobs:
     name: slides
     runs-on: ubuntu-latest
     steps:
-      - name:
+      - uses: actions/checkout@v2
+      - uses: seanmiddleditch/gha-setup-ninja@v3
+
+      - name: Install dependencies
         shell: bash
         run: |
-          mkdir mock-slides
-          echo "this is the content" > mock-slides/test.txt
+          sudo apt update
+          sudo apt install chromium-browser
+          wget https://github.com/marp-team/marp-cli/releases/download/v3.2.1/marp-cli-v3.2.1-linux.tar.gz
+          tar -xf ./marp-cli-v3.2.1-linux.tar.gz
+          sudo ln -s $(pwd)/marp /usr/bin/marp
 
-      - name: Publish slides on GitHub Pages
-        if: github.ref_name == 'publish_pdfs'
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
         shell: bash
-        run: echo "It works on ${{github.ref_name}}"
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake -S $GITHUB_WORKSPACE -B . -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Debug
+
+      - name: Copy slides
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          mkdir slides
+          # For the moment we just PDF slides, because HTML have problem with images urls
+          cp ./*.pdf ./slides/
+
+      - name: Generate index
+        if: github.ref_name == 'publish_pdfs'
+        working-directory: ${{runner.workspace}}/slides/
+        shell: bash
+        run: |
+          find . -name "*.pdf" -exec "<a href='{}'>{}</a>" \; > index.html
 
       - name: Publish artifact with mock-slides
         if: github.ref_name == 'publish_pdfs'
         uses: actions/upload-pages-artifact@v2
         with:
-          path: "mock-slides/"
+          path: "slides/"
 
   # Deploy job
   deploy:
