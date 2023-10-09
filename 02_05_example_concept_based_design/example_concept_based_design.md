@@ -170,3 +170,31 @@ public:
     friend auto cursor_get(any_cursor const& cur) -> decltype(auto) { return cur.impl_->get(); }
 };
 ```
+
+---
+
+# Summary: range-based for loop 
+
+```c++
+struct sentinel {};
+
+template <Cursor C>
+struct iter {
+    C& cur_;
+
+    decltype(auto) operator*() const {
+        return cursor::get(cur_);
+    }
+    void operator++() {
+        cursor::next(cur_);
+    }
+    bool operator!=(sentinel) const {
+        return cursor::done(cur_);
+    }
+};
+
+template <Cursor C>
+iter<C> begin(C& cur) { return { cur }; }
+template <Cursor C>
+sentinel end(C const& cur) { return {}; }
+```

@@ -90,6 +90,30 @@ public:
     }
 };
 
+namespace impl_ {
+    struct sentinel {};
+
+    template <Cursor C>
+    struct iter {
+        C& cur_;
+
+        decltype(auto) operator*() const {
+            return cursor::get(cur_);
+        }
+        void operator++() {
+            cursor::next(cur_);
+        }
+        bool operator!=(sentinel) const {
+            return cursor::done(cur_);
+        }
+    };
+} // namespace impl_
+
+template <Cursor C>
+impl_::iter<C> begin(C& cur) { return { cur }; }
+template <Cursor C>
+impl_::sentinel end(C const& cur) { return {}; }
+
 } // namespace cursor
 
 // cursor and cursor algorithm implementations
@@ -165,11 +189,13 @@ constexpr inline auto transform = [](auto f) {
 constexpr inline auto squared = transform([](auto a) { return a * a; });
 
 constexpr inline auto dump = [](Cursor auto cur) {
-    for (; !cursor::done(cur); cursor::next(cur)) {
-        std::cout << cursor::get(cur) << std::endl;
+    for (auto v : cur) {
+        std::cout << v << std::endl;
     }
 };
 
+using cursor::begin;
+using cursor::end;
 } // namespace cursor_library
 
 int main() {
