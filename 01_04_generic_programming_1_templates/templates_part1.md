@@ -19,12 +19,22 @@ size: 16:9
 
 ### John Biddiscombe / Mauro Bianco
 
-<!-- ---
+---
 
-## Templates Overview
+## Generic programming
 
-* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadics -->
+Wikipedia: "Generic programming is a style of computer programming in which algorithms are written in terms of data types to-be-specified-later that are then instantiated when needed for specific types provided as parameters."
 
+Us:  
+
+* Code re-use
+  * (Design) Patterns
+* Abstraction of algorithms and data
+  * Look no further than the STL (it _is_ amazing)
+* API
+  * Standardize the API for algorithms/operations
+* Use of operators and predicates
+  * Supplying functions to algorithms (as well as data)
 ---
 
 ## Functions and Classes (a reminder)
@@ -1322,8 +1332,8 @@ int main()
 
 * print1 does the right thing, but how do you add a delimiter?
 * print2 is better, but prints an extra delimiter
-* we want thr right number of delimiters and handle an empty inpput 
-* see fold example code for print3 
+* we want thr right number of delimiters and handle an empty inpput
+* see fold example code for print3
   [link to full example](https://godbolt.org/z/hbvh78381)
 
 ---
@@ -1379,6 +1389,7 @@ constN<countlower("Hello, world!")> out2;
 ## if constexpr
 
 * A nifty feature that allows you to get rid of some specializations
+
 ```c++
     template<int  N>
     constexpr int fibonacci() {return fibonacci<N-1>() + fibonacci<N-2>(); }
@@ -1398,7 +1409,7 @@ constN<countlower("Hello, world!")> out2;
 ```
 
 * Much simpler on the compiler, no recursive instantiations of templates
-* Code is directly evaluated at compile time 
+* Code is directly evaluated at compile time
 
 ---
 
@@ -1463,8 +1474,8 @@ constN<countlower("Hello, world!")> out2;
   ```asm
     movl $120, %esi
   ```
-[Compiler explorer link](https://godbolt.org/z/n5s4fjEjv)
 
+[Compiler explorer link](https://godbolt.org/z/n5s4fjEjv)
 
 ```c++
     template <int N>
@@ -1503,7 +1514,7 @@ constN<countlower("Hello, world!")> out2;
 ```
 
 * Type members with arbitrary names are called traits
-  * Often small helper utilities like `is_something<T>` 
+  * Often small helper utilities like `is_something<T>`
 
 ---
 
@@ -1719,9 +1730,10 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 ```
 
 ---
+
 ## Extra Example : demangle_helper
 
-* Here's an example of some of the constructs in use 
+* Here's an example of some of the constructs in use
   * Worked example if time permits
 * It uses a compiler extension to print types nicely
 
@@ -1741,13 +1753,9 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
 * Traits abstract out small elements of the logic
   * Many small helper `types` that handle typing sub-tasks
-  * Zero cost (at least at run-time) abstractions 
+  * Zero/Low cost (at least at run-time) abstractions
 
 * Meta-programming allows library developers to create highly tuned code
   * Manipulating types instead of values
-  * Fusion of kernels
-  * Unrolling/reordering of loops
+  * Fusion of kernels, Unrolling/reordering of loops
   * Specializations for types/data layouts
-
----
-
