@@ -1375,6 +1375,32 @@ constN<countlower("Hello, world!")> out2;
 
 ---
 
+## if constexpr
+
+* A nifty feature that allows you to get rid of some specializations
+```c++
+    template<int  N>
+    constexpr int fibonacci() {return fibonacci<N-1>() + fibonacci<N-2>(); }
+    template<>
+    constexpr int fibonacci<1>() { return 1; }
+    template<>
+    constexpr int fibonacci<0>() { return 0; }
+
+    template<int N>
+    constexpr int fibonacci()
+    {
+        if constexpr (N>=2)
+            return fibonacci<N-1>() + fibonacci<N-2>();
+        else
+            return N;
+    }
+```
+
+* Much simpler on the compiler, no recursive instantiations of templates
+* Code is directly evaluated at compile time 
+
+---
+
 ## Classes and Meta-Programming
 
 * Kinds of members
@@ -1692,32 +1718,35 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 ```
 
 ---
+## Extra Example : demangle_helper
+
+* Here's an example of some of the constructs in use 
+  * Worked example if time permits
+* It uses a compiler extension to print types nicely
+
+[Link to Compiler Explorer](https://godbolt.org/z/1MMjGjz8z)
+
+---
 
 ## Concluding remarks
 
 * Whenever you write the same basic code structure multiple times
   * Can you template it?
-* CPU version / GPU version
+  * Separation of algorithm/data
+
+* Example: CPU version / GPU version
   * Basically the same, but with some tweaks
   * Abstract most out, and specialize for the special bits
+
 * Traits abstract out small elements of the logic
-  * many small helper `types` that handle typing sub-tasks
+  * Many small helper `types` that handle typing sub-tasks
+  * Zero cost (at least at run-time) abstractions 
 
-<!-- 
---- 
-
-## Ideas
-
-Variant with a visitor - using `auto`
- ```c++
-    // get the i-th param from the variant algorithm list
-    auto p = std::visit([=](auto const& obj) { 
-        return obj.params[i];
-    }, alg);
-    // draw datasets in left column, params in right
-    int column = std::visit([&](auto const& v) { 
-        return get_column(v); 
-    }, std::get<1>(p));  ```
-``` -->
+* Meta-programming allows library developers to create highly tuned code
+  * Manipulating types instead of values
+  * Fusion of kernels
+  * Unrolling/reordering of loops
+  * Specializations for types/data layouts
 
 ---
+
