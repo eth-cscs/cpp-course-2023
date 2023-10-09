@@ -104,7 +104,7 @@ int apply_int_matrix(std::mdspan<int, std::dextents<int, 2>> s) {
 void test_my_md_array() {
     auto a = my_mdarray<int, 2>{ 3, 4 };
     std::cout << a.data_.size() << std::endl;
-    std::cout << apply_mdspan(a.to_mdspan()) << std::endl;
+    std::cout << apply_mdspan(a.mdspan()) << std::endl;
     std::cout << apply_int_matrix(a);
 }
 
