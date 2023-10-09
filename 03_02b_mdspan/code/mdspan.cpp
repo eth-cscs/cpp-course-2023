@@ -29,9 +29,11 @@ void extents_snippets() {
 void layout_strides() {
     std::vector<float> v(100);
 
-    using strided_md_span = std::mdspan<float, std::dextents<std::size_t, 3>, std::layout_stride>;
-    auto s = strided_md_span(v.data(), { std::dextents<std::size_t, 3>(2, 5, 10), std::array<std::size_t, 3>{ 5, 1, 10 } });
-    
+    // using strided_md_span = std::mdspan<float, std::dextents<std::size_t, 3>, std::layout_stride>;
+    // auto s = strided_md_span(v.data(), { std::dextents<std::size_t, 3>(2, 5, 10), std::array<std::size_t, 3>{ 5, 1, 10 } });
+
+    auto s = std::mdspan(v.data(), std::layout_stride::mapping(std::extents(2, 5, 10), std::array{ 5, 1, 10 }));
+
     s[1, 2, 3] = 42;
     assert((v[2 + 5 + 30] == s[1, 2, 3]));
 }
@@ -69,7 +71,45 @@ void test_host_device_protector() {
     std::cout << s[1, 2] << std::endl;
 }
 
+auto compute_strides(auto size, auto... sizes) {
+}
+
+template <class T, std::size_t N>
+struct my_mdarray {
+    std::vector<T> data_;
+    std::array<int, N> sizes_;
+
+    my_mdarray(std::convertible_to<int> auto... sizes) : data_((sizes * ...)), sizes_{ sizes... } {
+        std::iota(data_.begin(), data_.end(), 0);
+    }
+
+    operator std::mdspan<T, std::dextents<int, N>>() {
+        return { data_.data(), std::dextents<int, N>{ sizes_ } };
+    }
+
+    std::mdspan<T, std::dextents<int, N>> mdspan() {
+        return { data_.data(), std::dextents<int, N>{ sizes_ } };
+    }
+};
+
+template <class T, class E, class L, class A>
+T apply_mdspan(std::mdspan<T, E, L, A> s) {
+    return s[1, 2];
+}
+
+int apply_int_matrix(std::mdspan<int, std::dextents<int, 2>> s) {
+    return s[1, 2];
+}
+
+void test_my_md_array() {
+    auto a = my_mdarray<int, 2>{ 3, 4 };
+    std::cout << a.data_.size() << std::endl;
+    std::cout << apply_mdspan(a.to_mdspan()) << std::endl;
+    std::cout << apply_int_matrix(a);
+}
+
 int main() {
+    test_my_md_array();
     extents_snippets();
     layout_strides();
     test_host_device_protector();

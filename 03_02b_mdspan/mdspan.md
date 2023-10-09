@@ -22,17 +22,21 @@ size: 16:9
 
 # Motivation
 
-- C-Layout vs Fortran-Layout
-- vocabulary type
+- How can we deal with multi-dimensional data with different layout: C-Layout vs Fortran-Layout
 
-HPC software dealing with multi-dimensional data:
-- allocation of md array
-- accessing md array
-- iteration over md array
+Every HPC software dealing with multi-dimensional data implements their own:
+- allocation of multi-dimensional data (host/device, alignment, layout)
+- accessing multi-dimensional data (abstract layout)
+- iteration/algorithms over multi-dimensional data (in HPC mostly domain specific, highly optimized)
 
 How to interface between libraries?
 - Best case: well-defined/described concept that can be modelled by the *other* library
 - Worst case: concrete class
+
+
+**`md::span` is**
+- **a non-owning multi-dimensional array view**
+- **meant to be used in interfaces**
 
 ---
 
@@ -260,11 +264,41 @@ void test_host_device_protector() {
 
 - not part of C++23, but in working draft for C++26, see https://wg21.link/p2630 and https://eel.is/c++draft/mdspan.submdspan
 
+**TODO**
+---
+
+# Status of multi-dimensional C++
+
+✅ accessing multi-dimensional data (mdspan)
+❌ allocating multi-dimensional data
+❌ iterating multi-dimensional data / multi-dimensional algorithms (see \*)
+
+\* [Multidimensional C++, Bryce A. Lelbach at CppNorth 2022](https://youtu.be/aFCLmQEkPUw?si=4LI8eo5ZvBLEjDxq) 
+
 ---
 
 # Example: mdspan from custom mdarray\*
 
 
+```c++
+template <class T, std::size_t N>
+struct my_mdarray {
+    std::vector<T> data_;
+    std::array<int, N> sizes_;
+
+    my_mdarray(std::convertible_to<int> auto... sizes) : data_((sizes * ...)), sizes_{ sizes... } {
+        std::iota(data_.begin(), data_.end(), 0);
+    }
+
+    operator std::mdspan<T, std::dextents<int, N>>() {
+        return { data_.data(), std::dextents<int, N>{ sizes_ } };
+    }
+
+    std::mdspan<T, std::dextents<int, N>> mdspan() {
+        return { data_.data(), std::dextents<int, N>{ sizes_ } };
+    }
+};
+```
 
 
 
