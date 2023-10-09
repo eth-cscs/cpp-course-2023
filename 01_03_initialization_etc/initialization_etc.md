@@ -1523,49 +1523,128 @@ C. RuleOf8
 ![bg left:33%](./attachments/zero.png)
 # Rule of Zero
 
-TODO DEFINITION
+Classes that have:
++ custom destructors
++ copy/move constructors or
++ copy/move assignment operators
+
+**should deal exclusively with ownership**
+(which follows from the Single Responsibility Principle).
+
+<mark>
+
+**Other classes should not have custom destructors, copy/move constructors or copy/move assignment operators.**
+
+</mark>
 
 ---
 
-TODO EXAMPLE
+<div class="hcenter">
+
+# Let's say we hve C-style library
+
+```cpp
+#include <iostream>
+#include <memory>
+#include <zmq.h>
+
+int main (void) {
+    void *context = zmq_ctx_new();
+    void *requester = zmq_socket(context, ZMQ_REQ);
+
+    zmq_connect(requester, "tcp://localhost:5555");
+    zmq_send(requester, "Hello", 5, 0);
+
+    zmq_close(requester);
+    zmq_ctx_destroy(context);
+
+    return 0;
+}
+```
+
+</div>
+
+---
+
+<div class="hcenter">
+
+# We can apply RuleOf5!
+
+```cpp
+struct ZmqContext {
+    ZmqContext(void* handle) : context_(handle) {}
+    ~ZmqContext() { zmq_ctx_destroy(context_); }
+
+    ZmqContext(const ZmqContext&) = delete;
+    ZmqContext& operator=(const ZmqContext&) = delete;
+
+    ZmqContext(ZmqContext&&) = default;
+    ZmqContext& operator=(ZmqContext&&) = default;
+    private:
+    void* context_;
+};
+```
+
+```cpp
+int main () {
+    ZmqContext context = zmq_ctx_new();
+    ZmqSocket requester = zmq_socket(context, ZMQ_REQ);
+
+    zmq_connect(requester.get(), "tcp://localhost:5555");
+    zmq_send(requester.get(), "Hello", 5, 0);
+
+    return 0;
+}
+```
+
+</div>
+
+---
+<!-- _class: lead -->
+
+# Is it really worth it?
+### What about applying RuleOf0??
+
+---
+
+<center>
+
+# RuleOf0 rocks!
+
+</center>
+
+Actually we can use `std::unique_ptr` to express what kind of ownership we want to have for our object.
+
+<center>
+
+It's generic, it's reusable!
+
+</center>
 
 <div class="twocolumns">
 
 <div>
 
 ```cpp
+#include <iostream>
 #include <memory>
 #include <zmq.h>
 
 struct ZmqContext {
-    ZmqContext(void* handle) : context(handle) {}
-    std::unique_ptr<void, zmq_ctx_destroy> context;
+    ZmqContext(void* handle) : context_(handle, zmq_ctx_destroy) {}
+    void* get() const noexcept { return context_.get(); }
+
+    private:
+    std::unique_ptr<void, decltype(&zmq_ctx_destroy)> context_;
 };
 
 struct ZmqSocket {
-    ZmqSocket(void* handle) : socket(handle) {}
-    std::unique_ptr<void*, zmq_close> socket;
+    ZmqSocket(void* handle) : socket_(handle, zmq_close) {}
+    void* get() const noexcept { return socket_.get(); }
+
+    private:
+    std::unique_ptr<void, decltype(&zmq_close)> socket_;
 };
-
-int main (void)
-{
-    printf ("Connecting to hello world server...\n");
-    void *context = zmq_ctx_new ();
-    void *requester = zmq_socket (context, ZMQ_REQ);
-    zmq_connect (requester, "tcp://localhost:5555");
-
-    int request_nbr;
-    for (request_nbr = 0; request_nbr != 10; request_nbr++) {
-        char buffer [10];
-        printf ("Sending Hello %d…\n", request_nbr);
-        zmq_send (requester, "Hello", 5, 0);
-        zmq_recv (requester, buffer, 10, 0);
-        printf ("Received World %d\n", request_nbr);
-    }
-    zmq_close (requester);
-    zmq_ctx_destroy (context);
-    return 0;
-}
 ```
 
 </div>
@@ -1573,28 +1652,13 @@ int main (void)
 <div>
 
 ```cpp
-#include <zmq.h>
-#include <string.h>
-#include <stdio.h>
-#include <unistd.h>
+int main () {
+    ZmqContext context = zmq_ctx_new();
+    ZmqSocket requester = zmq_socket(context, ZMQ_REQ);
 
-int main (void)
-{
-    printf ("Connecting to hello world server...\n");
-    void *context = zmq_ctx_new ();
-    void *requester = zmq_socket (context, ZMQ_REQ);
-    zmq_connect (requester, "tcp://localhost:5555");
+    zmq_connect(requester.get(), "tcp://localhost:5555");
+    zmq_send(requester.get(), "Hello", 5, 0);
 
-    int request_nbr;
-    for (request_nbr = 0; request_nbr != 10; request_nbr++) {
-        char buffer [10];
-        printf ("Sending Hello %d…\n", request_nbr);
-        zmq_send (requester, "Hello", 5, 0);
-        zmq_recv (requester, buffer, 10, 0);
-        printf ("Received World %d\n", request_nbr);
-    }
-    zmq_close (requester);
-    zmq_ctx_destroy (context);
     return 0;
 }
 ```
@@ -1603,8 +1667,30 @@ int main (void)
 </div>
 
 ---
+<div class="hcenter">
 
-TODO RuleOf3 is superseeded, use either RuleOf0 or RuleOf5
+<center>
+
+##### In the end it is just
+# RuleOf0 vs RuleOf5
+
+</center>
+
+In modern C++ (>=C++11), where move-semantic has been introduced, RuleOf3 has pratically been superseeded by RuleOf5.
+
+Moreover, as we have seen, STL provides generic objects encapsulating ownership policies, e.g. `std::unique_ptr` and `std::shared_ptr`, allowing us to completely relying on them for the management.
+
+<center>
+
+For this reason the guideline is
+
+# <!--fit--> "prefer applyig RuleOf0 if possible, otherwise fallback to RuleOf5"
+
+[C++ Core Guidelines - C.20](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c20-if-you-can-avoid-defining-default-operations-do)
+
+</center>
+
+</div>
 
 ---
 # Conclusion/Recap
