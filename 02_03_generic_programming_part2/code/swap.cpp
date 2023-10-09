@@ -3,39 +3,39 @@
 
 namespace ns {
 
-struct swap1 {
+    struct swap1 {
 
-    swap1(int i) : data{i} {}
+        swap1(int i) : data{i} {}
 
-    friend void swap(swap1& a, swap1& b) {
-        b.data = std::exchange(a.data, b.data);
-    }
+        friend void swap(swap1& a, swap1& b) {
+            b.data = std::exchange(a.data, b.data);
+        }
 
-    int data;
-};
+        int data;
+    };
 
-struct swap2 {
+    struct swap2 {
 
-    swap2(int i) : data{i} {}
+        swap2(int i) : data{i} {}
 
-    swap2(swap2 const &) = delete;
+        swap2(swap2 const &) = delete;
 
-    friend void swap(swap2& a, swap2& b) {
-        b.data = std::exchange(a.data, b.data);
-    }
+        friend void swap(swap2& a, swap2& b) {
+            b.data = std::exchange(a.data, b.data);
+        }
 
-    int data;
-};
+        int data;
+    };
 
-struct swap3 {
+    struct swap3 {
 
-    swap3(int i) : data{i} {}
+        swap3(int i) : data{i} {}
 
-    swap3(swap3&&) = default;
-    swap3& operator=(swap3&&) = default;
+        swap3(swap3&&) = default;
+        swap3& operator=(swap3&&) = default;
 
-    int data;
-};
+        int data;
+    };
 
 }
 
