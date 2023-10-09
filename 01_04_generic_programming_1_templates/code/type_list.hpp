@@ -1,31 +1,10 @@
-// Copyright (C) 2018 ETH Zurich
-// Copyright (C) 2018 UT-Battelle, LLC
-// All rights reserved.
-//
-// See LICENSE for terms of usage.
-// See CITATION.md for citation guidelines, if DCA++ is used for scientific publications.
-//
-// Author: John Biddiscombe (john.biddiscombe@cscs.ch)
-//
-// This file provides a type list and type list operations.
-//
-// References: - Simple C++11 metaprogramming, Peter Dimov
-//               http://pdimov.com/cpp2/simple_cxx11_metaprogramming.html
-//               Interesting discussion of type transformations and examples.
-//               mp_xxxx metafunctions are taken from this source.
-//             - TypeLists and a TypeList Toolbox via Variadic Templates
-//               http://www.codeproject.com/Articles/1077852/TypeLists-and-a-TypeList-Toolbox-via-Variadic-Temp
-
-#ifndef DCA_UTIL_TYPE_LIST_HPP
-#define DCA_UTIL_TYPE_LIST_HPP
+#pragma once
 
 #include <iostream>
 #include <type_traits>
 #include <utility>
 
-namespace dca {
 namespace util {
-// dca::util::
 
 // mp_list: generic type list
 template <class... T>
@@ -246,6 +225,3 @@ template <typename T1, typename T2, typename T3>
 using Swap = mp_swap<T1, T2, T3>;
 
 }  // namespace util
-}  // namespace dca
-
-#endif  // DCA_UTIL_TYPE_LIST_HPP

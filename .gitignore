@@ -5,3 +5,4 @@ build/
 .cache/
 /.vscode
 .venv/
+compile_commands.json

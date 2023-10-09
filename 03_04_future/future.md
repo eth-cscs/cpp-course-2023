@@ -94,11 +94,11 @@ size: 16:9
 
 - Problem: header includes error prone and slow
   - "Stateful" headers possible with macros
-  - Parsing transitive headers may be very expensive (https://github.com/s9w/cpp-lit)
-    - Simply enabling C++20 may increase compilation times!
-- C++ modules (C++20) moves away from textual inclusion to a model where exports are explicit, macros don't leak, and build times aren't insane (though they can still be insane with modules)
+  - Parsing transitive headers may be very expensive (https://github.com/s9w/cpp-lit): simply enabling C++20 may increase compilation times!
+- C++ modules (C++20) moves away from textual inclusion to a model where exports are explicit, macros don't leak, and build times aren't insane (though they can still be insane because of templates)
 - GCC 14, clang 16, and CMake ~3.26 are starting to have usable (but experimental) support for modules
-  - https://godbolt.org/z/von5MfK7T (via https://github.com/compiler-explorer/compiler-explorer/discussions/2763)
+  - https://godbolt.org/z/von5MfK7T
+  - CMake 3.28 (unreleased) will have non-experimental support for modules: https://gitlab.kitware.com/cmake/cmake/-/issues/18355
 - The modules `std` and `std.compat` were added in C++23
 
 ```c++
@@ -176,6 +176,7 @@ auto [i] = this_thread::sync_wait(add_42).value();
 - CSCS developing [pika](https://github.com/pika-org/pika): builds functionality on top of `std::execution`
 - Targeted for C++26
 - Proposal: https://wg21.link/p2300
+- stdexec is available on compiler explorer: https://godbolt.org/z/T3MqhPGex
 
 ---
 

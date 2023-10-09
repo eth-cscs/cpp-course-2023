@@ -22,7 +22,7 @@ template <typename F, typename... Ts>
 auto make_task(F&& f, Ts&&... ts) {
     return task<F, Ts...>{
         std::forward<F>(f),
-        std::tuple(std::forward<Ts>(ts)...)
+        std::tuple<std::decay_t<Ts>...>(std::forward<Ts>(ts)...)
     };
 }
 

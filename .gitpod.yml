@@ -5,8 +5,9 @@ image:
 tasks:
   - init: |
       ln -s /workspace/cpp-course-2023/.gitpod/.vscode /workspace/cpp-course-2023/.vscode
-      cmake -S . -B $(pwd)/build -DCPP_COURSE_BUILD_SLIDES_PDF=OFF
+      cmake -S . -B $(pwd)/build -DCPP_COURSE_BUILD_SLIDES_PDF=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       cmake --build $(pwd)/build
+      ln -s $(pwd)/build/compile_commands.json $(pwd)
 
 vscode:
   extensions:

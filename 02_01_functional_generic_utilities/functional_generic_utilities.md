@@ -14,22 +14,497 @@ size: 16:9
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-### Lambdas and other functional utilities
+### Functional and generic programming utilities
 
 #### CSCS
 
 ---
 
-# Overview
+# `std::tuple` is simple, why do we care?
 
-- Not just functions: C++ has many other utilities for dealing with things that
-  behave like a function
-- Quick tour of lambdas, `operator()`, `std::function`, `std::bind`,
-  `std::apply`
+- Generic programming in C++ is in many cases "remove as many constraints as possible": the fewer constraints, the more generic
+  - _Don't overdo it, if there isn't a use case for it_
+- Sometimes we introduce constraints without realizing it, sometimes we introduce bugs without realizing it
+  - Important to understand the semantics and subtleties of the basic utilities when applying them to real problems
+- This session will cover a basic set of C++ tools that are useful in generic programming, including many functional programming utilities
 
 ---
 
-# Lambda use case 1: algorithms with higher-order functions
+# Warmup
+
+<style scoped>
+pre { font-size: 36pt; }
+</style>
+
+- What are the requirements on `T`?
+
+```c++
+template <typename T>
+void f(T&&) noexcept {
+    // I am the most generic function, but I can't do anything
+}
+```
+
+---
+
+# Warmup
+
+<style scoped>
+pre { font-size: 36pt; }
+</style>
+
+- What are the requirements on `T`?
+
+```c++
+template <typename T>
+void f(T&& t) noexcept {
+   std::cout << t << '\n';
+}
+```
+
+---
+
+# Warmup
+
+<style scoped>
+pre { font-size: 36pt; }
+</style>
+
+- What are the requirements on `T`?
+
+```c++
+template <typename T>
+void f(T&& t) noexcept {
+    t.foo();
+}
+```
+
+---
+
+# Warmup
+
+<style scoped>
+pre { font-size: 36pt; }
+</style>
+
+- What are the requirements on `T`?
+
+```c++
+template <typename T>
+void f(T&& t, bool flag) noexcept {
+    if (flag) {
+        t = T{};
+    }
+}
+```
+
+---
+
+# Warmup
+
+<style scoped>
+pre { font-size: 36pt; }
+</style>
+
+- What are the requirements on `T` and `U`?
+
+```c++
+template <typename T, typename U>
+void f(T&& t, U&& u) noexcept {
+    t = u;
+}
+```
+
+---
+
+# Warmup
+
+<style scoped>
+pre { font-size: 36pt; }
+</style>
+
+- What are the requirements on `T` and `U`?
+
+```c++
+template <typename T, typename U>
+void f(T&& t, U&& u) noexcept {
+    t = std::forward<U>(u);
+}
+```
+
+---
+
+# Warmup
+
+- Constraints come in different forms
+- Not only "has member function `foo`"
+- Also:
+  - Default constructibility
+  - Copyability
+  - Movability
+  - Comparability
+  - ...
+
+
+---
+
+# Session overview
+
+- C++ standard library basics:
+  - `std::tuple` for storing a compile-time known number of potentially homogeneous types
+    - by far the most commonly used utility in generic programming
+  - `std::optional` for storing up to one type
+  - `std::variant` for storing one of a compile-time known number of potentially homogeneous types
+- Functional utilities
+  - Lambdas and other function objects
+  - Partial application, function invocation, etc.
+- Finally: all of the above together
+
+---
+
+# `std::tuple`: what is it not good for?
+
+- If all elements in the tuple are known to be of the same type, prefer `std::array`
+
+```c++
+std::array<int, 3> a{42, 43, 44};
+
+// not
+std::tuple<int, int, int> t{42, 43, 44};
+```
+
+---
+
+# `std::tuple`: what is it not good for?
+
+- If you can give names to the members, prefer a struct
+
+```c++
+struct interval {
+    double begin;
+    double end;
+};
+
+interval i{1.0, 13.5};
+// use i.begin and i.end
+
+// not
+using interval = std::tuple<double, double>
+interval i{1.0, 13.5};
+// use std::get<0>(i) and std::get<1>(i)
+```
+
+---
+
+# `std::tuple`: what is it good for? Generic programming!
+
+- `std::tuple<Ts...>` :thumbsup:
+- `std::tuple<T1, T2>`:shrug:
+- `std::tuple<int, double>` :thumbsdown:
+
+---
+
+# `std::tuple`: what is it good for?
+
+- `std::tuple<Ts...>`: great for storing arguments for later use
+- Common pattern to separate:
+  - Description of work
+  - Execution of work
+- For example:
+  - Store a task for later execution on a thread pool
+  - Store a CUDA kernel for later execution with a given stream
+
+```c++
+template <typename... Ts>
+struct mytype {
+    // Unfortunately we can't do this
+    // Ts... ts;
+    // But we can do this
+    std::tuple<Ts...> ts;
+};
+```
+
+---
+
+# `std::tuple`: Kernel launcher
+
+- Full CUDA example: https://godbolt.org/z/cqnE6WzM8
+
+<div class="twocolumns">
+<div>
+
+```c++
+__global__ void fill(int* array, int n, int x);
+
+int main() {
+    int* array; int n; int x;
+
+    auto k = make_kernel_launcher(
+        256, (n + 256 - 1) / 256,
+        fill,
+        array, n, x);
+
+    {
+        // Initialize stream etc.
+        cudaStream_t stream{};
+        k(stream);
+    }
+}
+```
+
+</div>
+<div>
+
+```c++
+template <typename F, typename... Ts>
+struct kernel_launcher {
+    int block_dim;
+    int grid_dim;
+
+    std::decay_t<F> f;
+    std::tuple<std::decay_t<Ts>...> t;
+
+    void operator()(cudaStream_t stream) { /* TODO */ }
+};
+
+template <typename F, typename... Ts>
+auto make_kernel_launcher(
+    int block_dim, int grid_dim, F&& f, Ts&&... ts) {
+    return kernel_launcher<F, Ts...>(
+        block_dim, grid_dim,
+        std::forward<F>(f),
+        std::tuple<std::decay_t<Ts>...>(std::forward<Ts>(ts)...)
+    );
+}
+```
+
+</div>
+</div>
+
+---
+
+# `std::tuple`: constructing
+
+| `Ts...` | `auto t =` | `decltype(t)` |
+| -- | -- | -- |
+| `int, double&, mytype` | `std::tuple(ts...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::make_tuple(ts...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::tuple<std::decay_t<Ts>...>(ts...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::tuple<Ts...>(ts...)` | `std::tuple<int, &double, mytype>` |
+| `int, double&, mytype` | `std::forward_as_tuple(ts...)` | `std::tuple<int&&, double&, mytype&&>` |
+
+---
+
+# `std::tuple`: constructing but with forwarding
+
+| `Ts...` | `auto t =` | `decltype(t)` |
+| -- | -- | -- |
+| `int, double&, mytype` | `std::tuple(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::make_tuple(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::tuple<std::decay_t<Ts>...>(std::forward<Ts>(ts)...)` | `std::tuple<int, double, mytype>` |
+| `int, double&, mytype` | `std::tuple<Ts...>(std::forward<Ts>(ts)...)` | `std::tuple<int, &double, mytype>` |
+| `int, double&, mytype` | `std::forward_as_tuple(std::forward<Ts>(ts)...)` | `std::tuple<int&&, double&, mytype&&>` |
+
+---
+
+# `std::optional`
+
+- Traditional use case: failure
+
+```c++
+template <typename T>
+T div(T x, T y) noexcept {
+    return x / y; // May be undefined behaviour
+}
+
+template <typename T>
+std::optional<T> safeish_div(T x, T y) noexcept {
+    if (y == T{0}) { return std::nullopt; }
+    else { return x / y; }
+}
+```
+
+- However, `std::expected` (C++23) or exceptions are generally still a better choice because they can tell you _why_ something failed
+
+---
+
+# `std::optional`
+
+- Traditional use case: missing value
+
+```c++
+std::vector<int> v1;
+int x1 = v1.pop_back(); // Undefined behaviour
+
+myvector<int> v2;
+// Use of x2 requires explicit checking that it's valid
+std::optional<int> x2 = v2.pop_back();
+```
+
+---
+
+# `std::optional`
+
+- Generic programming use case: storing non-default-constructible types
+- For example: value filled in asynchronously by another thread
+
+<div class="twocolumns">
+<div>
+
+```c++
+struct mytype {
+    mytype() = delete;
+    mytype(int x) : x(x) {}
+    // copy and move constructors/assignment
+};
+template <typename T>
+struct mycontainer {
+    // Requires that T is default-constructible
+    T x{};
+};
+// mycontainer<mytype> c{}; // not ok
+mycontainer<mytype> c{mytype(42)}; // ok
+```
+
+</div>
+<div>
+
+```c++
+struct mytype {
+    mytype() = delete;
+    mytype(int x) : x(x) {}
+    // copy and move constructors/assignment
+};
+template <typename T>
+struct mycontainer2 {
+    // x can be filled in later without constraints on T
+    std::optional<T> x;
+};
+mycontainer<mytype> c{}; // ok
+mycontainer<mytype> c{mytype(42)}; // ok
+```
+
+</div>
+</div>
+
+---
+
+# `std::variant`
+
+- Closed set of homogeneous types, one is active
+- Like union, but type safe
+
+<div class="twocolumns">
+<div>
+
+Setting
+
+```c++
+std::variant<int, std::string> v{"hello"};
+// The second alternative is now active
+std::print("Alternative {} is active\n", v.index());
+// Is the first alternative active?
+std::print("Is the first alternative active: {}\n",
+    std::holds_alternative<T>(v));
+```
+
+</div>
+<div>
+
+Getting
+
+```c++
+// Access with std::get
+std::string x1 = std::get<1>(v); // ok
+std::string x2 = std::get<std::string>(v); // ok
+// throws std::bad_variant_access
+// std::string y1 = std::get<0>(v);
+// throws std::bad_variant_access
+// std::string y2 = std::get<int>(v);
+```
+
+Visiting
+
+```c++
+// Or with a generic function
+std::visit(visitor, v);
+```
+
+</div>
+</div>
+
+---
+
+# `std::variant`
+
+- Use case: abstract syntax tree
+- Full example: https://godbolt.org/z/dG1jb7x84
+
+```c++
+template <typename... Ts>
+using up = std::unique_ptr<Ts...>;
+
+struct lit; struct add; struct mul;
+using ast = std::variant<lit, up<add>, up<mul>>;
+
+struct lit { int x; };
+struct add { ast x, y; };
+struct mul { ast x, y; };
+
+int eval(ast const&);
+struct visitor {
+    auto operator()(lit const& l) const { return l.x; }
+    auto operator()(up<add> const& a) const { return eval(a->x) + eval(a->y); }
+    auto operator()(up<mul> const& m) const { return eval(m->x) * eval(m->y); }
+};
+int eval(ast const& a) { return std::visit(visitor{}, a); }
+```
+
+---
+
+# `std::variant`
+
+- `std::monostate`: an empty tag type that can be used to make `std::variant` default constructible
+
+```c++
+// First type is active after default construction
+// Fails to compile if mytype is not default constructible
+std::variant<mytype, int> v;
+```
+
+```c++
+// Always compiles, no matter what mytype is
+std::variant<std::monostate, mytype, int> v;
+```
+
+---
+
+# `std::variant`
+
+- Use case: Implementing `std::optional`!
+* ```c++
+  template <typename T>
+  struct optional {
+      std::variant<std::monostate, T> v;
+  };
+  ```
+
+---
+
+# Questions about `tuple`, `optional`, or `variant`?
+
+---
+
+# Functional utilities
+
+- Not just functions: C++ has many other things that behave like a function
+  - lambdas, `operator()`, `std::function`, `std::bind_front`
+- And many utilities that operate on functions or are useful in conjunction with those utilities:
+  - `std::invoke`, `std::apply`, `std::reference_wrapper`
+
+---
+
+# Lambda use case 1: algorithms as higher-order functions
 
 - Sometimes functions take another function as a parameter: "higher order function"
 - Treating functions as data
@@ -43,7 +518,7 @@ std::ranges::transform(x, ???);
 
 ---
 
-# Lambda use case 1: algorithms with higher-order functions
+# Lambda use case 1: algorithms as higher-order functions
 
 - Sometimes functions take another function as a parameter: "higher order function"
 - Treating functions as data
@@ -59,7 +534,7 @@ std::ranges::transform(x, triple);
 
 ---
 
-# Lambda use case 1: algorithms with higher-order functions
+# Lambda use case 1: algorithms as higher-order functions
 
 - Sometimes functions take another function as a parameter: "higher order function"
 - Treating functions as data
@@ -73,7 +548,7 @@ std::ranges::transform(x, [](int x) { return 3 * x; });
 
 ---
 
-# Lambda use case 1: algorithms with higher-order functions
+# Lambda use case 1: algorithms as higher-order functions
 
 - Sometimes functions take another function as a parameter: "higher order function"
 - Treating functions as data
@@ -181,7 +656,7 @@ void print(T);
 
 std::vector<int> v{1, 2, 3, 4};
 auto all_prints = &print; // Does not work!
-auto one_print = &print<int>; // Ok, but only one function
+auto one_print = &print<std::vector<int>>; // Ok, but only one function
 auto f = std::async(all_prints, v);
 ```
 
@@ -212,6 +687,8 @@ auto f = std::async(all_prints, v);
 
 # Lambdas, formally
 
+https://en.cppreference.com/w/cpp/language/lambda
+
 ![](lambdas_cppref.png)
 
 ---
@@ -225,7 +702,7 @@ auto f = std::async(all_prints, v);
 struct my_lambda {
    int x;
 
-   int operator()(int y) const { return x * y; }
+   auto operator()(int y) const { return x * y; }
 }
 
 int x = 42;
@@ -244,7 +721,7 @@ auto real_lambda = [x](int y) { return x * y; };
 struct my_lambda {
    int& x;
 
-   int operator()(int y) const { return x * y; }
+   auto operator()(int y) const { return x * y; }
 }
 
 int x = 42;
@@ -264,7 +741,7 @@ struct my_lambda {
    int& x;
    int z;
 
-   int operator()(int y) const { return x * y * z; }
+   auto operator()(int y) const { return x * y * z; }
 }
 
 int x = 42;
@@ -285,7 +762,7 @@ struct my_lambda {
    int& x;
    int z;
 
-   int operator()(int y) const { return x * y * z; }
+   auto operator()(int y) const { return x * y * z; }
 }
 
 int x = 42;
@@ -303,7 +780,7 @@ auto real_lambda = [=, &x](int y) { return x * y * z; };
 
 ```c++
 class my_class {
-   std::tuple<int, double> t;
+   int x;
 
    auto f() {
       // *this copied into lambda capture
@@ -341,7 +818,24 @@ void f(std::tuple<int, double>&& t1) {
 # Lambdas, formally
 
 - Which overload is called below?
-* Call operator is const by default
+
+```c++
+void g(std::tuple<int, double>&& t);
+void g(std::tuple<int, double> const& t);
+
+void f(std::tuple<int, double>&& t1) {
+    std::jthread([t2 = std::move(t1)]() {
+        g(std::move(t2));
+    });
+}
+```
+
+---
+
+# Lambdas, formally
+
+- Which overload is called below?
+- Call operator is const by default
   - `g(std::tuple<int, double> const&)` is called!
   - https://godbolt.org/z/xs4cdYh8f
 
@@ -367,17 +861,72 @@ void f(std::tuple<int, double>&& t1) {
 struct my_lambda {
    type x;
 
-   int operator()() /* const */ { return g(std::move(x)); }
+   auto operator()() /* const */ { return g(std::move(x)); }
 }
 
 type x{};
-auto emulated_lambda = my_lambda{x};
+auto emulated_lambda = my_lambda{std::move(x)};
 auto real_lambda = [x = std::move(x)](int y) mutable { return g(std::move(x)); };
 ```
 
 ---
 
-# Capturing a pack in a lambda
+# Lambdas, formally
+
+- Lambda parameters can be `auto` (or `auto&` or `auto&&`) since C++14
+- Generates a templated `operator()` for you
+
+```c++
+struct my_lambda {
+   template <typename T1, typename T2>
+   auto operator(T1 x1, T2 x2)() {}
+}
+
+auto emulated_lambda = my_lambda{};
+auto real_lambda = [](auto x1, auto x2) {};
+```
+
+---
+
+# Lambdas, formally
+
+- Lambda parameters can be `auto` (or `auto&` or `auto&&`) since C++14
+- Generates a templated `operator()` for you
+- `auto&&` acts as a forwarding reference
+
+```c++
+struct my_lambda {
+   template <typename T1, typename T2>
+   auto operator(T1&& x1, T2 x2)() {}
+}
+
+auto emulated_lambda = my_lambda{};
+auto real_lambda = [](auto&& x1, auto x2) {};
+```
+
+---
+
+# Lambdas, formally
+
+- Lambda parameters can be `auto` (or `auto&` or `auto&&`) since C++14
+- Generates a templated `operator()` for you
+- Since C++20 a lambda can be explicitly templated
+
+```c++
+struct my_lambda {
+   template <typename T1, typename T2>
+   auto operator(T1&& x1, T2 x2)() {}
+}
+
+auto emulated_lambda = my_lambda{};
+auto real_lambda = []<typename T2>(auto&& x1, T2 x2) {};
+```
+
+---
+
+# Lambdas, formally
+
+- Capturing packs can be done with tuples or explicit packs since C++20
 
 <div class="twocolumns">
 <div>
@@ -394,17 +943,34 @@ void f(Ts&&... ts) {
 </div>
 <div>
 
-## In C++17:
+## In C++14:
 ```c++
 template <typename... Ts>
 void f(Ts&&... ts) {
-    auto ff1 = [t = std::tuple(ts...)]() {};
-    auto ff2 = [t = std::tuple(std::forward<Ts>(ts)...)]() {};
+    auto ff1 = [t = std::tuple<std::decay_t<Ts>...>(ts...)]() {};
+    auto ff2 = [t = std::tuple<std::decay_t<Ts>...>(std::forward<Ts>(ts)...)]() {};
 }
 ```
 
 <div>
 <div>
+
+---
+
+# Lambdas, formally
+
+- `auto` is the default return type and often sufficient
+- Return type can be specified explicitly with the trailing `->` syntax
+- Can be used for SFINAE simply not accidentally returning the wrong type
+
+```c++
+struct my_lambda {
+   int operator(int x1, int x2)() { return x + y; }
+}
+
+auto emulated_lambda = my_lambda{};
+auto real_lambda = [](int x, int y) -> int { return x + y; };
+```
 
 ---
 
@@ -574,7 +1140,7 @@ std::apply(std::bind_front(f, 3.14), t));
 ---
 # `std::apply` exercise: finish `kernel_launcher`
 
-- See exercise `tuple_storage_apply` in `02_01_lambdas`
+- See exercise `tuple_storage_apply`
 
 ```c++
 template <typename F, typename... Ts>
@@ -593,13 +1159,39 @@ struct kernel_launcher {
 
 # `std::apply` exercise: implement it
 
-- See exercise `apply` in `02_01_lambdas`
+- See exercise `apply`
 - Example implementation: https://godbolt.org/z/6nzd1cjn6
 
 ```c++
 // Equivalent to f(42, 3.14)
 std::apply(f, std::tuple(42, 3.14));
 ```
+
+---
+
+# `std::apply` exercise: constructing tuples correctly
+
+- See exercise `apply_tuple_bug`
+- Is the following correct (equivalent to `g(ts...)`) for all `Ts`?
+
+```c++
+template <typename... Ts>
+auto f(Ts... ts) {
+    return std::apply(g, std::tuple(ts...));
+}
+```
+
+---
+
+# `std::tuple`: constructing, with a twist
+
+| `Ts...` | `auto t =` | `decltype(t)` |
+| -- | -- | -- |
+| `std::tuple<int, double&, mytype>` | `std::tuple(ts...)` | `std::tuple<int, double&, mytype>` |
+| `std::tuple<int, double&, mytype>` | `std::make_tuple(ts...)` | `std::tuple<std::tuple<int, double&, mytype>>` |
+| `std::tuple<int, double&, mytype>` | `std::tuple<std::decay_t<Ts>...>(ts...)` | `std::tuple<std::tuple<int, double&, mytype>>` |
+| `std::tuple<int, double&, mytype>` | `std::tuple<Ts...>(ts...)` | `std::tuple<std::tuple<int, &double, mytype>>` |
+| `std::tuple<int, double&, mytype>` | `std::forward_as_tuple(ts...)` | `std::tuple<std::tuple<int, double&, mytype>&&>` |
 
 ---
 
@@ -684,7 +1276,7 @@ const auto x = [&]() {
 
 # `overloaded` exercise: How does the following work?
 
-- See exercise `ast` in `02_00_optional_variant_tuple`
+- See exercise `ast`
 
 ```c++
 template<class... Ts>
