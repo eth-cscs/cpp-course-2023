@@ -19,12 +19,22 @@ size: 16:9
 
 ### John Biddiscombe / Mauro Bianco
 
-<!-- ---
+---
 
-## Templates Overview
+## Generic programming
 
-* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions, Structured Bindings -->
+Wikipedia: "Generic programming is a style of computer programming in which algorithms are written in terms of data types to-be-specified-later that are then instantiated when needed for specific types provided as parameters."
 
+Us:  
+
+* Code re-use
+  * (Design) Patterns
+* Abstraction of algorithms and data
+  * Look no further than the STL (it _is_ amazing)
+* API
+  * Standardize the API for algorithms/operations
+* Use of operators and predicates
+  * Supplying functions to algorithms (as well as data)
 ---
 
 ## Functions and Classes (a reminder)
@@ -34,7 +44,6 @@ size: 16:9
 
 ```c++
     int add(int x, int y) { return x + y; }
-
     int main() { add(65, 35); }
 ```
 
@@ -46,12 +55,13 @@ size: 16:9
     struct name2; //                        public 
 
     class name1 {
-        // insert interesting things here ...
+        // insert more interesting things here ...
         int thing1;
-        int thing2(float);
+        int func2(float) { ... };
     };
-    // here we instantiate a variable of type 'name1'
-    int main() { name1 x; }
+    int main() { 
+      name1 x; // here we instantiate a variable of type 'name1' 
+    }
 ```
 
 ---
@@ -89,7 +99,7 @@ size: 16:9
 * Overloading functions is quite normal, regardless of templates
 * It's a form of specialization/customization of the function itself
 * Note: Functions can't be overloaded based on return type alone
-  * introduces ambiguities due to type conversions
+  * introduces ambiguities (+ problems with type conversions)
 
 ```c++
     void function1(int x);
@@ -360,11 +370,11 @@ namespace two {
 ```c++
     template <typename T> 
     class thing {
+        using type = T;
         T member;
         std::unique_ptr<T> other;
         T operator()(T a, T b) const {...}
     };
-
     int main() {
       thing<int> x;
       thing<double> y;
@@ -706,6 +716,92 @@ output : `i d A` `i f A` `i d 65`
 
 ---
 
+## Alias templates
+  
+<div class="twocolumns">
+<div>
+
+* typedefs on steroids!
+  * But they are still really just typedefs
+
+```c++
+      using integer_type = int;
+      // same as
+      typedef int integer_type;
+  ```
+
+</div>
+<div>
+
+* But you can template them, which is really helpful
+
+  ```c++
+    // create an alias for a std::vector
+    template <typename T> 
+    using my_type = std::vector<T>;
+
+    // and then later on
+    my_type<double> x(100);    
+  ```
+
+</div>
+</div>
+
+* Many template arguments and defaults are allowed
+
+  ```c++
+    // create an alias for an STL-like container (which is itself templated) 
+    template <template <typename, typename> typename T, typename U,
+            template <typename> typename Alloc = std::allocator>            
+    using my_container = T<U, Alloc<U>>;
+
+    my_container<std::vector, int> x(100); 
+
+    // you can fill in (for example) an allocator to save the user doing it
+    std::vector<int, std::allocator<int>>
+  ```
+
+---
+
+## Alias templates (it's an alias, not a new type)
+
+```c++
+template <typename T>
+using my_vec = std::vector<T, my_allocator<T>>;
+
+template <typename T> // defintion 1
+std::size_t size_of(my_vec<T> const& v) { return v.size(); }
+
+template <typename T> // defintion 2 - this is the same as 1
+std::size_t size_of(std::vector<T, my_allocator<T>> const& v) {
+    return v.size();
+}
+```
+
+`error: redefinition of 'size_of' std::size_t size_of(std::vector<T, my_allocator<T>> const& v)`
+
+---
+
+## Alias templates (it's an alias, not a new type)
+
+```c++
+  template <template <typename, typename> class V>  // 3
+  std::size_t size_of(V<int, std::allocator<int>> const& v) { return v.size(); }
+
+  template <template <typename> class V>            // 4
+  std::size_t size_of(V<int> const&v) { return v.size(); }
+
+  int main() {
+      std::cout << size_of(my_vec<int>(23,0)) << std::endl; // uses 3, 4 doesn't match
+  }
+```
+
+* even though we've aliased the vector to a single template param, it really still has 2, using #4 we get  
+
+  `template template argument has different template parameters than its corresponding template template parameter`
+
+---
+
 ## Default Template Arguments and Specializations
 
 * Which specialization applies
@@ -731,6 +827,42 @@ int main() {
 
 ---
 
+## Specialization - Trickier selection
+
+```c++
+    template <typename T, typename U = int>
+    struct X {
+        X() {
+            std::cout << "Primary " << typeid(T).name() << " "  << typeid(U).name() << "\n";
+        }
+    };
+    template <typename T>
+    struct X<T, typename T::extra_type> {      
+        X() {
+            std::cout << "Specialization " << typeid(T).name() << " " << typeid(typename T::extra_type).name() << "\n";
+        }
+    };
+    struct A { using value_type = int; };
+    struct B { using extra_type = int; };
+    struct C { using extra_type = float; };
+    struct D { using extra_type = char; };
+    int main() {
+        X<A> a;         // uses primary - A::value_type not a match
+        X<B> b;         // uses specialization - B::extra_type = int
+        X<C> c;         // uses primary - C::extra_type not int
+        X<B,char> b1;   // uses primary - B::extra_type not char
+        X<D,char> d;    // uses specialization, D::extra_type = char
+    }
+```
+
+`Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
+
+* Reducing template params from 2 down to 1
+* **use specialization If `T::extra_type` matches `U`**
+* [Compiler explorer link](https://godbolt.org/z/nz7n67roe) : [More advanced link](https://godbolt.org/z/bovaf1P8T)
+
+---
+
 ## SFINAE
 
 * **Substitution Failure Is Not An Error**
@@ -753,44 +885,6 @@ int main() {
 * When it succeeds, it becomes a candidate for specialization/lookup
 * "concepts" and "constexpr if" can/will mostly do away with SFINAE
   * but tons of existing code still uses it
-
----
-
-## Specialization in Action
-
-```c++
-    template <typename T, typename U = int>
-    struct X {
-        X() {
-            std::cout << "Primary " << typeid(T).name() << " "  << typeid(U).name() << "\n";
-        }
-    };
-
-    template <typename T>
-    struct X<T, typename T::extra_type> {      
-        X() {
-            std::cout << "Specialization " << typeid(T).name() << " " << typeid(typename T::extra_type).name() << "\n";
-        }
-    };
-
-    struct A { using value_type = int; };
-    struct B { using extra_type = int; };
-    struct C { using extra_type = float; };
-    struct D { using extra_type = char; };
-
-    int main() {
-        X<A> a;         // uses primary - A::value_type not a match
-        X<B> b;         // uses specialization - B::extra_type = int
-        X<C> c;         // uses primary - C::extra_type not int
-        X<B,char> b1;   // uses primary - B::extra_type not char
-        X<D,char> d;    // uses specialization, D::extra_type = char
-    }
-```
-
-`Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
-
-* use specialization If `T::extra_type` matches `U`
-* [Compiler explorer link](https://godbolt.org/z/nz7n67roe) : [More advanced link](https://godbolt.org/z/bovaf1P8T)
 
 ---
 
@@ -965,7 +1059,7 @@ int main() {
 
       // CTAD allows a lambda to be passed directly in
       B b{[](int i, int j) {cout << i+j << "\n";}};
-
+            
       a.call(3,4);
       b.call(3,4);
   }    
@@ -1003,6 +1097,7 @@ int main() {
 
 </div>
 <div>
+
 * Internally, the compiler is doing the heavy lifting by deduction using the equivalent of auto-generated (function template) helpers
 
 ```c++
@@ -1025,252 +1120,62 @@ int main() {
     }
 ```
 
----
-
-## Classes and Meta-Programming
-
-* Kinds of members
-  * [Static] Function
-  * [Static] Data
-  * Constexpr function
-  * Static const/Constexpr data
-  * Type (nested type names)
-
-* Meta-programming is manipulating types
-  * And static const/constexpr values
-* The main mechanism is using class templates
-* Single applications rarely need TMP
-* Useful when building abstraction layers
-  * E.g., header-only libraries
-
----
-
-## Step Back
-
-* Type members are possible
-* Access like static members
-  * `X::type_t<U>`
-* Visibility rules as normal
-* Constexpr variables visible at translation unit level
+</div>
+</div>
 
 ```c++
-    class X {
-     /*public/private/*/protected:
-        using type = ...;
-
-        template <typename T, ...>
-        using type_t = ...;
-
-        static const int a = 10;
-        static constexpr int b =10;
-
-        X(…);
-
-        void member(…);
-    };
+    std::shared_ptr ptr(new int(10)); // <sigh>
 ```
 
 ---
 
-## A simple example
+## auto keyword
 
-* A complex way to say
-
-  ```asm
-    movl $120, %esi
-  ```
+<div class="twocolumns">
+<div>
 
 ```c++
-    template <unsigned char N>
-    struct factorial {
-        static constexpr unsigned value = N * factorial<N-1>::value;
-    };
-
-    template <>
-    struct factorial<1> {
-        static constexpr unsigned value=1;
-    };
-
-
-    int main() {
-        std::cout << factorial<5>::value << "\n"; 
-    }
-```
-
-[Compiler explorer link](https://godbolt.org/z/9KPa4rqYe)
-
----
-
-## A Convention for TMP
-
-* TMP is still an “accident” in C++
-* Boost::MPL conventions partially adopted by ISO C++
-* A meta-function returning a type has a public ::type
-* A meta-function returning a value has a public ::value
-* Or both
-
-```c++
-           template <Arguments…>
-           struct meta_function {
-               using type = … ;
-               static constexpr … value = … ; 
-           };
-```
-
-* Type members with arbitrary names are called traits
-
----
-
-## std::integral_constant
-
-```c++
-template<class T, T v>
-struct integral_constant {
-    typedef T value_type;
-    static constexpr value_type value = v;
+// forward declarations to keep compiler happy
+struct thing1;
+struct thing2 {
+    double val{3.14};
+    thing1 operator + (const thing1& t1) const;
 };
 
-
-//use:
-static_assert(integral_constant<int, 7>::value == 7, “Error”)
-
-```
-
----
-
-## Building abstractions: std::rank example
-
-* Type of `T[3][4]` is `(T[3])[4]`
-
-```c++
-    template<class T>
-    struct rank 
-        : public integral_constant<size_t, 0>
-    {};
-
-    template<class T, size_t N>
-    struct rank<T[N]> // (int[3])[4] => T[4] where T = int[3]
-        : public integral_constant<size_t, rank<T>::value + 1>
-    {};
-
-    template<class T>
-    struct rank<T[]>
-      : public integral_constant<size_t, rank<T>::value + 1>
-    {}; 
-```
-
----
-
-## An Example with Types: If on Types
-
-* If (boolean value) then type1, else type2
-* A shorter version
-
-```c++
-    template <bool Pred, typename T1, typename T2>
-    struct select_first {
-        using type = T2;
-    };
-
-    template <typename T1, typename T2>
-    struct select_first<true, T1, T2> {
-        using type = T1;
-    };
-```
-
-* But why do we need this?
-
----
-
-## One (Maybe) Silly Example
-
-```c++
-    template <bool WithRef>
-    typename select_first<WithRef, int&, int>::type
-    with_ref (typename select_first<WithRef, int&, int>::type x) {
-        x += 1;
-        return x;
+struct thing1 {    
+    double val{3.14};
+    auto operator + (const thing2& t2) const
+    {   
+        return thing2{t2.val + val};
     }
+};
 
-    int main() {
-        int x = 1;
-        with_ref<true>(x);
-        with_ref<false>(x);
-    }
-```
-
----
-
-## Alias templates
-
-* typedefs on steroids!
-  * But they are still really just typedefs
-  
-  ```c++
-      using integer_type = int;
-      // same as
-      typedef int integer_type;
-  ```
-
-  * But you can template them, which is really helpful
-
-  ```c++
-    // create an alias for a std::vector  
-    template <typename T> 
-    using my_type = std::vector<T>;
-
-    // and then later on
-    my_type<double> x(100);    
-  ```
-
-* Many template arguments and defaults are allowed
-
-  ```c++
-    // create an alias for an STL-like container (which is itself templated) 
-    template <template <typename, typename> typename T, typename U,
-            template <typename> typename Alloc = std::allocator>            
-    using my_container = T<U, Alloc<U>>;
-
-    my_container<std::vector, int> x(100);
-  ```
-
----
-
-## Alias templates (it's an alias, not a new type)
-
-```c++
-template <typename T>
-using my_vec = std::vector<T, my_allocator<T>>;
-
-template <typename T> // defintion 1
-std::size_t size_of(my_vec<T> const& v) { return v.size(); }
-
-template <typename T> // defintion 2 - this is the same as 1
-std::size_t size_of(std::vector<T, my_allocator<T>> const& v) {
-    return v.size();
+thing1 thing2::operator + (const thing1& t1) const {
+    return thing1{t1.val + val};
 }
 ```
 
-`error: redefinition of 'size_of' std::size_t size_of(std::vector<T, my_allocator<T>> const& v)`
-
----
-
-## Alias templates (it's an alias, not a new type)
+</div>
+<div>
 
 ```c++
-template <template <typename, typename> class V>  // 3
-std::size_t size_of(V<int, std::allocator<int>> const& v) { return v.size(); }
-
-template <template <typename> class V>            // 4
-std::size_t size_of(V<int> const&v) { return v.size(); }
-
-int main() {
-    std::cout << size_of(my_vec<int>(23,0)) << std::endl; // uses 3, 4 doesn't match
+int main()
+{
+    thing1 t1{3.14};
+    thing2 t2{6.28};
+    auto r1 = t1 + t2;
+    auto r2 = t2 + t1;
+    std::cout << typeid(r1).name() << std::endl;
+    std::cout << typeid(r2).name() << std::endl;
 }
 ```
 
-* even though we've aliased the vector to a single template param, it really still has 2, using #4 we get  
-  `template template argument has different template parameters than its corresponding template template parameter`
+`6thing2` `6thing1`
+
+</div>
+</div>
+
+* When functions return unexpected or difficult to guess types (especially types derived from operations on other unknown types) - the auto keyword becomes essential
 
 ---
 
@@ -1333,15 +1238,15 @@ int main() {
 
 ---
 
-## Recursion in action
+## Variadics - Recursion in action
 
 ```c++
     void pretty_print(std::ostream& s) {
         s <<"\n";
     }
     
-    template <typename T, typename ...Ts>
-    void pretty_print(std::ostream& s, T first, Ts ...values) {
+    template <typename T, typename... Ts>
+    void pretty_print(std::ostream& s, T first, Ts... values) {
         s << " {" << first << "} ";
         pretty_print(s, values...);
     }
@@ -1351,7 +1256,8 @@ int main() {
     }
 ```
 
-[Compiler Explorer link](https://godbolt.org/z/QTU3Uz)
+* Gives ` {3.2}  {hello}  {42}  {world} `
+[Compile  r Explorer link](https://godbolt.org/z/YdrPnn94x)
 
 ---
 
@@ -1388,6 +1294,317 @@ int main() {
         std::cout << "Result: " << std::boolalpha << b << std::endl;
     }
 ```
+
+* Pre-add syntax: Left fold
+  `(... + vals)  =>  (((vals1 + vals2) + vals3) + vals4)`
+
+* Post-add syntax: Right Fold
+  `(vals + ...)  =>  (vals1 + (vals2 + (vals3 + vals4))`
+
+---
+
+## Pretty print using fold
+
+* Using a unary left fold
+
+```c++
+    template<typename... Ts>
+    void print1(Ts... vals)
+    {
+        (std::cout << ... << vals);
+    }
+```
+
+* Using a binary left fold
+
+```c++
+    template<typename... Ts>
+    void print2(const char *delim, Ts... vals)
+    {
+        auto showdelim = [](const char *delim, const auto& param) -> const auto& {
+          std::cout << delim;
+          return param;
+        };
+
+        (std::cout << ... << showdelim(delim, vals) ) << std::endl ;
+    }
+```
+
+* print1 does the right thing, but how do you add a delimiter?
+* print2 is better, but prints an extra delimiter
+* we want thr right number of delimiters and handle an empty inpput
+* see fold example code for print3
+  [link to full example](https://godbolt.org/z/hbvh78381)
+
+---
+
+## Constexpr
+
+* The constexpr specifier declares that it is possible to evaluate the value of the function or variable at compile time.
+* Such variables and functions can then be used where only compile time constant expressions are allowed (provided that appropriate function arguments are given).
+
+<div class="twocolumns">
+<div>
+
+```c++
+// A literal class
+class conststr
+{
+    const char* p;
+    std::size_t sz;
+public:
+    template<std::size_t N>
+    constexpr conststr(const char(&a)[N]): p(a), sz(N - 1) {}
+ 
+    constexpr char operator[](std::size_t n) const {
+        return n < sz ? p[n] : throw std::out_of_range("");
+    }
+    constexpr std::size_t size() const { return sz; }
+};
+```
+
+</div>
+<div>
+
+```c++
+constexpr std::size_t countlower(conststr s, std::size_t n = 0,
+                                             std::size_t c = 0)
+{
+    return n == s.size() ? c :
+        'a' <= s[n] && s[n] <= 'z' ? countlower(s, n + 1, c + 1)
+                                   : countlower(s, n + 1, c);
+}
+```
+
+```c++
+std::cout << "Number lowercase letters in \"Hello, world!\" is ";
+constN<countlower("Hello, world!")> out2; 
+```
+
+</div>
+</div>
+
+---
+
+## if constexpr
+
+* A nifty feature that allows you to get rid of some specializations
+
+```c++
+    template<int  N>
+    constexpr int fibonacci() {return fibonacci<N-1>() + fibonacci<N-2>(); }
+    template<>
+    constexpr int fibonacci<1>() { return 1; }
+    template<>
+    constexpr int fibonacci<0>() { return 0; }
+
+    template<int N>
+    constexpr int fibonacci()
+    {
+        if constexpr (N>=2)
+            return fibonacci<N-1>() + fibonacci<N-2>();
+        else
+            return N;
+    }
+```
+
+* Much simpler on the compiler, no recursive instantiations of templates
+* Code is directly evaluated at compile time
+
+---
+
+## Classes and Meta-Programming
+
+* Kinds of members
+  * [Static] Function
+  * [Static] Data
+  * Constexpr function
+  * Static const/Constexpr data
+  * Type (nested type names)
+
+* Meta-programming is manipulating types
+  * And static const/constexpr values
+* The main mechanism is using class templates
+* Single applications rarely need TMP
+* Useful when building abstraction layers
+  * E.g., header-only libraries
+
+---
+
+## Step Back
+
+<div class="twocolumns">
+<div>
+
+* Type members are possible
+* Access like static members
+  * `X::type_t<U>`
+* Visibility rules as normal
+* Constexpr variables visible at translation unit level
+
+</div>
+<div>
+
+```c++
+    class X {
+     /*public/private/*/protected:
+        using type = ...;
+
+        template <typename T, ...>
+        using type_t = ...;
+
+        static const int a = 10;
+        static constexpr int b =10;
+
+        X(...);
+
+        void member(...);
+    };
+```
+
+</div>
+</div>
+
+---
+
+## A simple example
+
+* A complex way to fill a register with a value
+
+  ```asm
+    movl $120, %esi
+  ```
+
+[Compiler explorer link](https://godbolt.org/z/n5s4fjEjv)
+
+```c++
+    template <int N>
+    struct factorial {
+        static constexpr int value = N * factorial<N-1>::value;
+    };
+
+    template <>
+    struct factorial<1> {
+        static constexpr int value=1;
+    };
+
+    int main() {
+        std::cout << factorial<5>::value << "\n"; 
+    }
+```
+
+* NB. `use -ftemplate-depth=N to increase recursive template instantiation depth`
+
+---
+
+## A Convention for TMP
+
+* TMP is still an “accident” in C++
+  * Boost::MPL conventions partially adopted by ISO C++
+* A meta-function returning a type has a public ::type
+* A meta-function returning a value has a public ::value
+* Usually/Frequently/Often *both*
+
+```c++
+      template <Arguments…>
+      struct meta_function {
+          using type = ... ;
+          static constexpr … value = ... ; 
+      };
+```
+
+* Type members with arbitrary names are called traits
+  * Often small helper utilities like `is_something<T>`
+
+---
+
+## std::integral_constant
+
+* A type for each number
+
+```c++
+template<class T, T v>
+struct integral_constant {
+    using value_type = T ;
+    static constexpr value_type value = v;
+};
+
+// use :value to access the underlying content 
+static_assert(integral_constant<int, 7>::value == 7, “Error”)
+
+```
+
+---
+
+## Building abstractions: std::rank example
+
+* Type of `T[3][4]` is `(T[3])[4]`
+
+```c++
+    template<class T> // Primary
+    struct rank : public integral_constant<size_t, 0> {};
+
+    template<class T, size_t N> // Specialize for an array type
+    struct rank<T[N]>           // (int[3])[4] => T[4] where T = int[3]
+        : public integral_constant<size_t, rank<T>::value + 1> {};
+
+    template<class T>
+    struct rank<T[]>
+        : public integral_constant<size_t, rank<T>::value + 1> {}; 
+
+    int main() {
+        int x[5][4][7][2];
+        std::cout << rank<decltype(x)>::value << std::endl; 
+    }
+
+```
+
+* Gives output of `4` [Link to example](https://godbolt.org/z/j6KMTcrM8)
+
+---
+
+## An Example with Types: If on Types
+
+* If (boolean value) then type1, else type2
+
+```c++
+    template <bool Pred, typename T1, typename T2>
+    struct select_first {
+        using type = T2; // Primary (false)
+    };
+
+    template <typename T1, typename T2>
+    struct select_first<true, T1, T2> {
+        using type = T1; // Specialization for true
+    };
+```
+
+* But why do we need this?
+* One building block for more complex meta-programming functions/features
+
+---
+
+## One (Maybe) Silly Example
+
+```c++
+    template <bool WithRef>
+    typename select_first<WithRef, int&, int>::type
+    with_ref (typename select_first<WithRef, int&, int>::type x) {
+        x += 1;
+        return x;
+    }
+
+    int main() {
+        int x = 1;
+        std::cout << with_ref<false>(x) << " " << x << std::endl;
+        std::cout << with_ref<true>(x)  << " " << x << std::endl;
+    }
+```
+
+* Gives `2 1` `2 2` [Link](https://godbolt.org/z/WEqj6PKq3)
+* Note use of `typename` for the return type of the function
+  * the compiler needs this to warn it that the type isn't known yet
+  * you see this everywhere in TMP
 
 ---
 
@@ -1514,30 +1731,31 @@ int main() {
 
 ---
 
+## Extra Example : demangle_helper
+
+* Here's an example of some of the constructs in use
+  * Worked example if time permits
+* It uses a compiler extension to print types nicely
+
+[Link to Compiler Explorer](https://godbolt.org/z/1MMjGjz8z)
+
+---
+
 ## Concluding remarks
 
 * Whenever you write the same basic code structure multiple times
   * Can you template it?
-* CPU version / GPU version
+  * Separation of algorithm/data
+
+* Example: CPU version / GPU version
   * Basically the same, but with some tweaks
   * Abstract most out, and specialize for the special bits
-* Traits
 
-<!-- 
---- 
+* Traits abstract out small elements of the logic
+  * Many small helper `types` that handle typing sub-tasks
+  * Zero/Low cost (at least at run-time) abstractions
 
-## Ideas
-
-Variant with a visitor - using `auto`
- ```c++
-    // get the i-th param from the variant algorithm list
-    auto p = std::visit([=](auto const& obj) { 
-        return obj.params[i];
-    }, alg);
-    // draw datasets in left column, params in right
-    int column = std::visit([&](auto const& v) { 
-        return get_column(v); 
-    }, std::get<1>(p));  ```
-``` -->
-
----
+* Meta-programming allows library developers to create highly tuned code
+  * Manipulating types instead of values
+  * Fusion of kernels, Unrolling/reordering of loops
+  * Specializations for types/data layouts

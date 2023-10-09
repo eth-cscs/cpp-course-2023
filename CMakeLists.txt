@@ -26,20 +26,24 @@ endif()
 
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+	set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "-fno-math-errno")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "-fno-math-errno")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
     set(CPP_COURSE_AVX_OPTION "-march=core-avx2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-    set(CPP_COURSE_AVX_OPTION "/arch:AVX2")
+	set(CPP_COURSE_AVX_OPTION "/arch:AVX2")
+    set(CPP_COURSE_MATH_NO_ERRNO_OPTION "")
 endif()
 
 
 # Day 1
 add_subdirectory(01_01_introduction)
 add_subdirectory(01_02_infrastructure_resources)
-add_subdirectory(01_03_initialization_etc)
+add_subdirectory(01_03_raii_move-semantics)
 add_subdirectory(01_04_generic_programming_1_templates)
 
 # Day 2
