@@ -9,3 +9,7 @@ add_executable(02_03_swap
 add_executable(02_03_swap_cpo
     code/swap_cpo.cpp
 )
+
+add_executable(02_03_swap_tag_invoke
+    code/swap_tag_invoke.cpp
+)

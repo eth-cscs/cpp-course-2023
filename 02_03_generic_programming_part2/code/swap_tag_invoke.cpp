@@ -90,38 +90,42 @@ concept tag_invocable =
 #include <iostream>
 
 namespace std2 {
-    namespace hidden {
-        struct swap_helper {
-            template<class A, class B>
-            auto operator()(A& a, B& b) const -> tag_invoke_result_t<swap_helper, A&, B&> {
-                return tag_invoke(*this, a, b);
-            }
-        };
-    }
-    inline constexpr hidden::swap_helper swap_;
-
-    // use the CPO
-    template<typename A, typename B>
-        requires std::invocable<decltype(swap_), A&, B&>
-    void my_swap(A& a, B& b) {
-        // Just call the CPO like an ordinary function
-        swap_(a, b);
-    }
+    inline constexpr struct swap_fn {
+        template<typename A, typename B>
+        auto operator()(A& a, B& b) const noexcept(noexcept(tag_invoke(*this, a, b))) -> decltype(tag_invoke(*this, a, b)) {
+            return tag_invoke(*this, a, b);
+        }
+        
+        // default implementation
+        template<typename A, typename B, std::enable_if_t<!is_tag_invocable<swap_fn, A&, B&>::value, bool> = true>
+        auto operator()(A& a, B& b) const -> decltype(std::swap(a, b)) {
+            return std::swap(a, b);
+        }
+    } swap{};
 }
-
 
 namespace ns {
 
-struct swap1 {
+    struct swap1 {
 
-    swap1(int i) : data{i} {}
+        swap1(int i) : data{i} {}
 
-    friend void swap(tag_t<std2::swap_>, swap1& a, swap1& b) {
-        b.data = std::exchange(a.data, b.data);
-    }
+        friend void tag_invoke(tag_t<std2::swap>, swap1& a, swap1& b) {
+            b.data = std::exchange(a.data, b.data);
+        }
 
-    int data;
-};
+        int data;
+    };
+
+    struct swap3 {
+
+        swap3(int i) : data{i} {}
+
+        swap3(swap3&&) = default;
+        swap3& operator=(swap3&&) = default;
+
+        int data;
+    };
 
 }
     
@@ -134,12 +138,20 @@ int main() {
 
     ns::swap1 a{1}, b{2};
     print(a, b);
-    //swap(a, b);
-    print(a, b);
+    //swap(a, b);              ADL is turned off / swap is not a function
+    //print(a, b);
     std2::swap(a, b);
     print(a, b);
+    {
+        using namespace std2;
+        swap(a, b);
+    }
+    print(a, b);
 
-
+    ns::swap3 e{5}, f{6};
+    print(e, f);
+    std2::swap(e, f);
+    print(e, f);
 
     return 0;
 }

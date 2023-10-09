@@ -8,26 +8,42 @@ backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
 size: 16:9
 ---
 
-# **Generic programming tools**
+# **Generic programming tools: CPOs**
 ![bg cover](../slides-support/common/title-bg3.png)
 <!-- _paginate: skip  -->
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-#### Alberto Invernizzi, Fabian Bösch
+#### Fabian Bösch
 
 ---
 
 # Customization mechanisms for generic interfaces
 
-When writing generic algorithms and libraries, some information needs to be transferred from the user to library (author).
-What we would like to have: customization of interfaces which
+When writing generic algorithms and libraries
+
+- information needs to be transferred from the user to library (author)
+- compile time:
+  - (syntactical) correctness
+  - check type requirements (function signature, type introspection, concept)
+  - compute associated types (traits, `decltype`)
+- run time:
+  - object properties (domain specific)
+- customization
+  - user must be able to *easily* customize the *default*
+
+---
+
+# Customization mechanism: interface wish-list
+
+What we would like to have: customization of interfaces (functions) which
 
 - are non-intrusive
 - are explicitly opt-in
 - prevent incorrect opt-in (error when wrong signature)
 - are able to provide default implementations
-- are simple to invoke (hard to incorrectly invoke the default when customized)
+- are simple to correctly invoke *customized* version when *default* exist
+- are hard to incorrectly invoke the *default* when *customized* exist
 - are clear in their intent when looking at the code (what and how to customize if at all)
 - are easy to verify for a given type
 
@@ -74,7 +90,7 @@ can have default implementation or not (*pure virtual* function)
 
 ## How are we doing?
 
-|   | virtual function | |
+|  virtual function | | |
 |---|----------------|---|
 | non-intrusive | no | inheritance from base |
 | explicitly opt-in | yes | have to inherit |
@@ -107,7 +123,26 @@ struct array_like {
     virtual auto operator[](unsigned long) -> ????;
 };
 ```
-- We can parametrize the interface
+</div>
+<div>
+
+<br></br>
+
+what about this?
+
+</div>
+</div>
+
+---
+
+# Static Polymorphism: Class Template Specialization
+
+- no additional runtime overhead, usually doesn't require allocation
+
+<div class="twocolumns">
+<div>
+
+### parametrized interface
 
 ```c++
 template<typename T>
@@ -117,30 +152,8 @@ struct array_like {
     virtual T& operator[](unsigned long) = 0;
 };
 ```
-</div>
-<div>
 
-<br></br>
-
-what about this?
-
-<br></br>
-
-defeats purpose: have interface template
-for each type that we may encounter
-
-</div>
-</div>
-
----
-
-# Static Polymorphism: Class Template Specialization 
-
-
-- idea: specialize a class with your type
-
-<div class="twocolumns">
-<div>
+### class template specialization
 
 ```c++
 // A formatter for objects of type T.
@@ -156,19 +169,23 @@ struct formatter {
 </div>
 <div>
 
-formatter class definition for `fmt::format`
+<br></br>
+
+need to write class for your array type `A`: parametrization isn't really useful
+
+<br></br>
+
+formatter class definition for `fmt::format`: pretty empty
 
 from documentation: needs `parse` and `format` function
+
 </div>
 </div>
 
-- no additional runtime overhead
-- usually doesn't require allocation
-- issues?
 
 ---
 
-|   | class template specialization | |
+|  class template specialization | | |
 |---|----------------|---|
 | non-intrusive | yes | can specialize any class |
 | explicitly opt-in | yes | works only through specialization |
@@ -184,6 +201,7 @@ from documentation: needs `parse` and `format` function
 # Static Polymorphism: Customization Points
 
 - Familiar from standard library functions such as `std::swap`
+- no additional runtime overhead, usually doesn't require allocation
 - Work through ADL: Argument-dependent (name) lookup
 - need specific incantation:
 
@@ -203,12 +221,34 @@ unqualified call to swap (note: not `std::swap(a, b)`)
 </div>
 </div>
 
-- no additional runtime overhead
-- usually doesn't require allocation
+<div class="twocolumns">
+<div>
+
+make interface available through (friend member) funcion
+
+```c++
+struct x {
+    int data;
+
+    friend void swap(x& a, x& b) {
+        b.data = std::exchange(a.data, b.data);
+    }
+};
+```
+</div>
+<div>
+
+<br></br>
+
+- `std::swap` can also handle types without explicit `swap` interface
+   - move constructible, move assignable
+
+</div>
+</div>
 
 ---
 
-|   | customization points | |
+|    customization points  | | |
 |---|----------------|---|
 | non-intrusive | yes | can overload `swap` for any type |
 | explicitly opt-in | no | opt-in is implicit |
@@ -260,9 +300,18 @@ ADL may break this code!
 
 - Switch off ADL by using objects
 
+<div class="twocolumns">
+<div>
+
 ```c++
 namespace std2 {
     namespace hidden {
+
+        // "poison pill" to hide overloads of swap() that might be found in parent namespace
+        // we want to limit to only finding overloads by ADL.
+        void swap() = delete;
+
+        // define function object with operator() that forwards to call to unqualified 'swap()'
         struct swap_helper {
             template<class A, class B>
                 requires /* swappable constraints */
@@ -272,9 +321,29 @@ namespace std2 {
             }
         };
     }
-    inline constexpr hidden::swap_helper swap;
+
+    // use inline namespace to avoid potential conflicts with hidden friend functions
+    // which add functions with name 'swap' into enclosing namespace
+    inline namespace swap_cpo {
+        inline constexpr hidden::swap_helper swap;
+    }
 }
 ```
+
+</div>
+<div>
+
+```c++
+struct x {
+    int data;
+    friend void swap(x& a, x& b) {
+        b.data = std::exchange(a.data, b.data);
+    }
+};
+```
+
+</div>
+</div>
 
 - now both ways work
 
@@ -299,7 +368,7 @@ std2::swap(a, b);
 
 ---
 
-|   | customization points objects | |
+|  customization points objects | | |
 |---|----------------|---|
 | non-intrusive | yes | can overload `swap` for any type |
 | explicitly opt-in | no | opt-in is implicit |
@@ -324,6 +393,11 @@ Other issues
 
 - idea: use one CPO called `tag_invoke` which takes an arbitrary CPO as argument
 
+<div class="twocolumns">
+<div>
+
+### implementation
+
 ```c++
 namespace hidden {
     struct tag_invoke_fn {
@@ -336,7 +410,7 @@ namespace hidden {
 }
 inline constexpr hidden::tag_invoke_fn tag_invoke{};
 
-// some more helper types and values:
+// some more helper traits and values:
 template <auto& CPO>
 using tag_t = ...;
 
@@ -347,16 +421,95 @@ template <typename CPO, typename... Args>
 inline constexpr bool is_tag_invocable_v = ...;
 ```
 
+</div>
+<div>
+
+### use
+
+```c++
+namespace std2 {
+    // simplified way to write CPO
+    inline constexpr struct swap_fn {
+        template<typename A, typename B>
+            requires /* swappable constraints */
+        auto operator()(A& a, B& b) const /* noexcept clause */
+        -> decltype(tag_invoke(*this, a, b)) { // trailing return type SFINAE
+            return tag_invoke(*this, a, b);
+        }
+    } swap{};
+}
+
+struct x {
+    int data;
+    friend void tag_invoke(tag_t<std2::swap>, x& a, x& b) {
+        b.data = std::exchange(a.data, b.data);
+    }
+};
+```
+
+</div>
+</div>
+
 ---
 
+- both ways work
+
+<div class="twocolumns">
+<div>
+
+```c++
+using namespace std2;
+swap(a, b);
+```
+</div>
+<div>
+
+```c++
+std2::swap(a, b);
+```
+
+</div>
+</div>
+
+- but ADL is switched off: `swap(a, b)` without qualification / namespace use won't work
+- globally reserve a single name: `tag_invoke`
+
+---
+
+|  `tag_invoke` | | |
+|---|----------------|---|
+| non-intrusive | yes | can overload `tag_invoke` for any type |
+| explicitly opt-in | yes | opt-in is explicit |
+| prevents incorrect opt-in | partially | library author can write checks (failure is earlier) |
+| provides default implementations | yes | by adding overload for `operator()` in our CPO |
+| simple to invoke | yes | qualified call |
+| hard to incorrectly invoke | yes | qualified call |
+| code shows intent | partially | recognize `tag_invoke` friend function |
+| easy to verify for a given type | partially | with separate concept |
+
+Other issues
+- ususally requires similar amount of code than CPOs
+- not yet standard (`tag_invoke` requires some machinery behind the scenes)
+
+---
+
+# Conclusions
+
+- Many nuances to consider
+- ADL can lead to subtle errors
+- Lack of language feature requires elaborate library (workarounds)
+- `tag_invoke` is best option for now
+  - if we care about a few free functions
+- If we need to create a whole type for an interface
+  - other options (inherit mixins with CRTP, policies etc)
 
 ---
 
 # References
 
+- https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1895r0.pdf
 - https://brevzin.github.io/c++/2020/12/19/cpo-niebloid/
 - https://brevzin.github.io/c++/2020/12/01/tag-invoke/
-- https://stackoverflow.com/a/62929027
 - https://quuxplusone.github.io/blog/2019/08/02/the-tough-guide-to-cpp-acronyms/#cpo
 - https://www.fi.muni.cz/pv264/files/pv264_s06b_niebloids.pdf
 
