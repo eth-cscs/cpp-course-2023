@@ -1284,6 +1284,47 @@ int main()
     }
 ```
 
+* Pre-add syntax: Left fold
+  `(... + vals)  =>  (((vals1 + vals2) + vals3) + vals4)`
+
+* Post-add syntax: Right Fold
+  `(vals + ...)  =>  (vals1 + (vals2 + (vals3 + vals4))`
+
+---
+
+## Pretty print using fold
+
+* Using a unary left fold
+
+```c++
+    template<typename... Ts>
+    void print1(Ts... vals)
+    {
+        (std::cout << ... << vals);
+    }
+```
+
+* Using a binary left fold
+
+```c++
+    template<typename... Ts>
+    void print2(const char *delim, Ts... vals)
+    {
+        auto showdelim = [](const char *delim, const auto& param) -> const auto& {
+          std::cout << delim;
+          return param;
+        };
+
+        (std::cout << ... << showdelim(delim, vals) ) << std::endl ;
+    }
+```
+
+* print1 does the right thing, but how do you add a delimiter?
+* print2 is better, but prints an extra delimiter
+* we want thr right number of delimiters and handle an empty inpput 
+* see fold example code for print3 
+  [link to full example](https://godbolt.org/z/hbvh78381)
+
 ---
 
 ## Constexpr
