@@ -40,15 +40,14 @@ section::after {
   text-align: center;
 }
 
-pre {
+pre, code {
   color: black;
-  background-color: white;
-  margin: 10px solid black;
-  border: 1px solid black;
+  background-color: #EEEEEE;
 }
 
-code.language-cpp {
-  color: black;
+pre {
+  margin: 10px solid black;
+  border: 1px solid black;
 }
 
 /*!
