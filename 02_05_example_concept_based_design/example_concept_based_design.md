@@ -189,7 +189,7 @@ struct iter {
         cursor::next(cur_);
     }
     bool operator!=(sentinel) const {
-        return cursor::done(cur_);
+        return !cursor::done(cur_);
     }
 };
 
