@@ -84,8 +84,8 @@ size: 16:9
   - `std::format` and `std::print`
   - `std::expected`
 - Features useful for HPC that are targeted for C++26:
-  - `std::execution`
   - `std::simd`
+  - `std::execution`
   - `std::linalg` + `std::mdspan`
 
 ---
@@ -228,69 +228,6 @@ else
 | unexpected | `transform_error(G&&)`      | `or_else(G&&)`                                          | `expected<T1, E2>` |
 
 - extended example at https://godbolt.org/z/dEGYa6fGW
-
----
-
-# `std::execution`
-
-- Until now: parallel algorithms (CPU only)
-- Third party vendor solutions:
-  - Thrust (CPU, NVIDIA, AMD)
-  - nvhpc (NVIDIA)
-  - SYCL (CPU, NVIDIA, AMD)
-- Other third party libraries:
-  - Kokkos
-  - Alpaka
-- `std::execution` aims to put generic building blocks in C++ standard
-
----
-
-# `std::execution` hello world
-
-```c++
-using namespace std::execution;
-
-scheduler auto sch = thread_pool.scheduler();
-
-sender auto begin = schedule(sch);
-sender auto hi = then(begin, []{
-    std::cout << "Hello world! Have an int.";
-    return 13;
-});
-sender auto add_42 = then(hi, [](int arg) { return arg + 42; });
-
-auto [i] = this_thread::sync_wait(add_42).value();
-```
-
----
-
-# `std::execution`
-
-- Performance portable building blocks
-- *Senders* represent work
-- *Schedulers* represent where work runs
-- *Algorithms* represent what work to do
-- Reference implementation can already be used today: [stdexec](https://github.com/NVIDIA/stdexec)
-- CSCS developing [pika](https://github.com/pika-org/pika): builds functionality on top of `std::execution`
-- Targeted for C++26
-- Proposal: https://wg21.link/p2300
-- stdexec is available on compiler explorer: https://godbolt.org/z/T3MqhPGex
-
----
-
-# `std::execution`: not only for asynchrony
-
-- Schedulers (executors) finally get us a step closer to heterogeneous execution of parallel algorithms
-- Blocking overloads of parallel algorithms much simpler to reason about
-- Proposal: https://wg21.link/p2500
-
-```c++
-std::for_each(
-    std::execute_on(scheduler, std::execution::par),
-    begin(data),
-    end(data),
-    f);
-```
 
 ---
 
@@ -457,6 +394,69 @@ T f(T x) {
 - Speed-up is often a factor of `size()` , but may be less, depending on hardware details
 - Requires refactoring of code (loops, elimination of conditionals, introduction of `where` expressions)
 - P0350 may help for simple cases
+
+---
+
+# `std::execution`
+
+- Until now: parallel algorithms (CPU only)
+- Third party vendor solutions:
+  - Thrust (CPU, NVIDIA, AMD)
+  - nvhpc (NVIDIA)
+  - SYCL (CPU, NVIDIA, AMD)
+- Other third party libraries:
+  - Kokkos
+  - Alpaka
+- `std::execution` aims to put generic building blocks in C++ standard
+
+---
+
+# `std::execution` hello world
+
+```c++
+using namespace std::execution;
+
+scheduler auto sch = thread_pool.scheduler();
+
+sender auto begin = schedule(sch);
+sender auto hi = then(begin, []{
+    std::cout << "Hello world! Have an int.";
+    return 13;
+});
+sender auto add_42 = then(hi, [](int arg) { return arg + 42; });
+
+auto [i] = this_thread::sync_wait(add_42).value();
+```
+
+---
+
+# `std::execution`
+
+- Performance portable building blocks
+- *Senders* represent work
+- *Schedulers* represent where work runs
+- *Algorithms* represent what work to do
+- Reference implementation can already be used today: [stdexec](https://github.com/NVIDIA/stdexec)
+- CSCS developing [pika](https://github.com/pika-org/pika): builds functionality on top of `std::execution`
+- Targeted for C++26
+- Proposal: https://wg21.link/p2300
+- stdexec is available on compiler explorer: https://godbolt.org/z/T3MqhPGex
+
+---
+
+# `std::execution`: not only for asynchrony
+
+- Schedulers (executors) finally get us a step closer to heterogeneous execution of parallel algorithms
+- Blocking overloads of parallel algorithms much simpler to reason about
+- Proposal: https://wg21.link/p2500
+
+```c++
+std::for_each(
+    std::execute_on(scheduler, std::execution::par),
+    begin(data),
+    end(data),
+    f);
+```
 
 ---
 
