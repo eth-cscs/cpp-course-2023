@@ -6,6 +6,9 @@
 #include <iostream>
 #include <ranges>
 #include <span>
+#include <vector>
+
+#if defined(__cpp_multidimensional_subscript) and (__cpp_multidimensional_subscript >= 202110L)
 
 void extents_snippets() {
     auto ext1 = std::extents<int, std::dynamic_extent, 3, std::dynamic_extent, 4>{ 42, 43 };
@@ -130,3 +133,8 @@ int main() {
 
     std::cout << v[15] << std::endl;
 }
+
+
+#else
+int main() {}
+#endif
