@@ -847,6 +847,7 @@ int main() {
 
 `Primary 1A` `Specialization 1B` `Primary 1C` `Primary 1B` `Specialization 1D`  
 
+* Reducing template params from 2 down to 1
 * **use specialization If `T::extra_type` matches `U`**
 * [Compiler explorer link](https://godbolt.org/z/nz7n67roe) : [More advanced link](https://godbolt.org/z/bovaf1P8T)
 
