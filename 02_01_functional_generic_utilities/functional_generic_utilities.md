@@ -291,7 +291,7 @@ auto make_kernel_launcher(
 | `int, double&, mytype` | `std::make_tuple(ts...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::tuple<std::decay_t<Ts>...>(ts...)` | `std::tuple<int, double, mytype>` |
 | `int, double&, mytype` | `std::tuple<Ts...>(ts...)` | `std::tuple<int, &double, mytype>` |
-| `int, double&, mytype` | `std::forward_as_tuple(ts...)` | `std::tuple<int&&, double&, mytype&&>` |
+| `int, double&, mytype` | `std::forward_as_tuple(ts...)` | `std::tuple<int&, double&, mytype&>` |
 
 ---
 
