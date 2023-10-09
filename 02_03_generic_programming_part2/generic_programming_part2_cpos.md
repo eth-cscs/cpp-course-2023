@@ -256,10 +256,10 @@ struct x {
 <div>
 
 <br></br>
-<br></br>
 
 - `std::swap` can also handle types without explicit `swap` interface
    - move constructible, move assignable
+   - is a default implementation
 
 </div>
 </div>
@@ -273,7 +273,7 @@ struct x {
 | prevents incorrect opt-in | partially | may still compile, but may not work correctly (concept could help) |
 | provides default implementations | yes | `std::swap(...)` works for many types out of the box |
 | simple to invoke | kinda | need to remember to make namespace available |
-| hard to incorrectly invoke | no | use `std::swap(...)` by mistake |
+| hard to incorrectly invoke | no | use `std::swap(...)` by mistake, ADL woes |
 | code shows intent | no | `std::swap` is just a function template in the standard library |
 | easy to verify for a given type | no | only with separate concept  |
 
