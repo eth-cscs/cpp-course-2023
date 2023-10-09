@@ -23,7 +23,7 @@ size: 16:9
 
 ## Templates Overview
 
-* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadic templates, Fold Expressions, Structured Bindings -->
+* function and class templates, Overloads, Argument deduction, Partial specialization, Default template parameters, Non type template parameters, SFINAE and enable_if, Class template type deduction, Basic intro to meta-programming, Alias templates, Variadics -->
 
 ---
 
@@ -1245,7 +1245,8 @@ int main()
     }
 ```
 
-[Compiler Explorer link](https://godbolt.org/z/QTU3Uz)
+* Gives ` {3.2}  {hello}  {42}  {world} `
+[Compile  r Explorer link](https://godbolt.org/z/YdrPnn94x)
 
 ---
 
@@ -1285,6 +1286,54 @@ int main()
 
 ---
 
+## Constexpr
+
+* The constexpr specifier declares that it is possible to evaluate the value of the function or variable at compile time.
+* Such variables and functions can then be used where only compile time constant expressions are allowed (provided that appropriate function arguments are given).
+
+<div class="twocolumns">
+<div>
+
+```c++
+// A literal class
+class conststr
+{
+    const char* p;
+    std::size_t sz;
+public:
+    template<std::size_t N>
+    constexpr conststr(const char(&a)[N]): p(a), sz(N - 1) {}
+ 
+    constexpr char operator[](std::size_t n) const {
+        return n < sz ? p[n] : throw std::out_of_range("");
+    }
+    constexpr std::size_t size() const { return sz; }
+};
+```
+
+</div>
+<div>
+
+```c++
+constexpr std::size_t countlower(conststr s, std::size_t n = 0,
+                                             std::size_t c = 0)
+{
+    return n == s.size() ? c :
+        'a' <= s[n] && s[n] <= 'z' ? countlower(s, n + 1, c + 1)
+                                   : countlower(s, n + 1, c);
+}
+```
+
+```c++
+std::cout << "Number lowercase letters in \"Hello, world!\" is ";
+constN<countlower("Hello, world!")> out2; 
+```
+
+</div>
+</div>
+
+---
+
 ## Classes and Meta-Programming
 
 * Kinds of members
@@ -1305,11 +1354,17 @@ int main()
 
 ## Step Back
 
+<div class="twocolumns">
+<div>
+
 * Type members are possible
 * Access like static members
   * `X::type_t<U>`
 * Visibility rules as normal
 * Constexpr variables visible at translation unit level
+
+</div>
+<div>
 
 ```c++
     class X {
@@ -1322,74 +1377,80 @@ int main()
         static const int a = 10;
         static constexpr int b =10;
 
-        X(…);
+        X(...);
 
-        void member(…);
+        void member(...);
     };
 ```
+
+</div>
+</div>
 
 ---
 
 ## A simple example
 
-* A complex way to say
+* A complex way to fill a register with a value
 
   ```asm
     movl $120, %esi
   ```
+[Compiler explorer link](https://godbolt.org/z/n5s4fjEjv)
+
 
 ```c++
-    template <unsigned char N>
+    template <int N>
     struct factorial {
-        static constexpr unsigned value = N * factorial<N-1>::value;
+        static constexpr int value = N * factorial<N-1>::value;
     };
 
     template <>
     struct factorial<1> {
-        static constexpr unsigned value=1;
+        static constexpr int value=1;
     };
-
 
     int main() {
         std::cout << factorial<5>::value << "\n"; 
     }
 ```
 
-[Compiler explorer link](https://godbolt.org/z/9KPa4rqYe)
+* NB. `use -ftemplate-depth=N to increase recursive template instantiation depth`
 
 ---
 
 ## A Convention for TMP
 
 * TMP is still an “accident” in C++
-* Boost::MPL conventions partially adopted by ISO C++
+  * Boost::MPL conventions partially adopted by ISO C++
 * A meta-function returning a type has a public ::type
 * A meta-function returning a value has a public ::value
-* Or both
+* Usually/Frequently/Often *both*
 
 ```c++
-           template <Arguments…>
-           struct meta_function {
-               using type = … ;
-               static constexpr … value = … ; 
-           };
+      template <Arguments…>
+      struct meta_function {
+          using type = ... ;
+          static constexpr … value = ... ; 
+      };
 ```
 
 * Type members with arbitrary names are called traits
+  * Often small helper utilities like `is_something<T>` 
 
 ---
 
 ## std::integral_constant
 
+* A type for each number
+
 ```c++
 template<class T, T v>
 struct integral_constant {
-    typedef T value_type;
+    using value_type = T ;
     static constexpr value_type value = v;
 };
 
-
-//use:
+// use :value to access the underlying content 
 static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
 ```
@@ -1401,42 +1462,46 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 * Type of `T[3][4]` is `(T[3])[4]`
 
 ```c++
-    template<class T>
-    struct rank 
-        : public integral_constant<size_t, 0>
-    {};
+    template<class T> // Primary
+    struct rank : public integral_constant<size_t, 0> {};
 
-    template<class T, size_t N>
-    struct rank<T[N]> // (int[3])[4] => T[4] where T = int[3]
-        : public integral_constant<size_t, rank<T>::value + 1>
-    {};
+    template<class T, size_t N> // Specialize for an array type
+    struct rank<T[N]>           // (int[3])[4] => T[4] where T = int[3]
+        : public integral_constant<size_t, rank<T>::value + 1> {};
 
     template<class T>
     struct rank<T[]>
-      : public integral_constant<size_t, rank<T>::value + 1>
-    {}; 
+        : public integral_constant<size_t, rank<T>::value + 1> {}; 
+
+    int main() {
+        int x[5][4][7][2];
+        std::cout << rank<decltype(x)>::value << std::endl; 
+    }
+
 ```
+
+* Gives output of `4` [Link to example](https://godbolt.org/z/j6KMTcrM8)
 
 ---
 
 ## An Example with Types: If on Types
 
 * If (boolean value) then type1, else type2
-* A shorter version
 
 ```c++
     template <bool Pred, typename T1, typename T2>
     struct select_first {
-        using type = T2;
+        using type = T2; // Primary (false)
     };
 
     template <typename T1, typename T2>
     struct select_first<true, T1, T2> {
-        using type = T1;
+        using type = T1; // Specialization for true
     };
 ```
 
 * But why do we need this?
+* One building block for more complex meta-programming functions/features
 
 ---
 
@@ -1452,10 +1517,15 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 
     int main() {
         int x = 1;
-        with_ref<true>(x);
-        with_ref<false>(x);
+        std::cout << with_ref<false>(x) << " " << x << std::endl;
+        std::cout << with_ref<true>(x)  << " " << x << std::endl;
     }
 ```
+
+* Gives `2 1` `2 2` [Link](https://godbolt.org/z/WEqj6PKq3)
+* Note use of `typename` for the return type of the function
+  * the compiler needs this to warn it that the type isn't known yet
+  * you see this everywhere in TMP
 
 ---
 
@@ -1589,7 +1659,8 @@ static_assert(integral_constant<int, 7>::value == 7, “Error”)
 * CPU version / GPU version
   * Basically the same, but with some tweaks
   * Abstract most out, and specialize for the special bits
-* Traits
+* Traits abstract out small elements of the logic
+  * many small helper `types` that handle typing sub-tasks
 
 <!-- 
 --- 
