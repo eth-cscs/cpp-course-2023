@@ -51,14 +51,14 @@ This gives a lot of safety, plus it allows the language(=compiler) to do assumpt
 
 <div class="hcenter">
 
-<!-- https://godbolt.org/z/41KdEd333 -->
+<!-- https://godbolt.org/z/onYnxbbjr -->
 
 ```python
 class Person:
     def feed(self, food):
         print(f"lets eat some {food}")
 
-class Chimney:
+class Fireplace:
     def feed(self, fuel):
         print(f"let's burn some {fuel}")
 
@@ -70,7 +70,7 @@ storage_basement = ["🪵", "⛽️"]
 storage_1st_floor = ["🍝", "🍗", "🧁",]
 
 print("not a big problem... 🗑️")
-feed_all(storage_1st_floor, Chimney())
+feed_all(storage_1st_floor, Fireplace())
 
 print("unless you start eating it! 💀")
 feed_all(storage_basement, Person())
