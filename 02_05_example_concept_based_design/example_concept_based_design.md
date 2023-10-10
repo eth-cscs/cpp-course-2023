@@ -41,6 +41,39 @@ Survey: level of experience with templates and generic programming
 
 --- 
 
+# Warm-up
+
+```c++
+template<class T>
+T square(T v) {
+    return v*v;
+}
+```
+
+<div data-marpit-fragment>
+
+```c++
+template<std::floating_point T>
+T square(T v) {
+    return v*v;
+}
+```
+
+</div>
+
+<div data-marpit-fragment>
+
+```c++
+template<HasMultiplyOp T>
+T square(T v) {
+    return v*v;
+}
+```
+
+</div>
+
+---
+
 
 # Example Concept for today
 
@@ -60,7 +93,7 @@ We will develop a library around that concept: [start](https://godbolt.org/#g:!(
 # Exercises
 
 
-starting point for exercises https://godbolt.org/z/WPcGhY976
+starting point for exercises https://godbolt.org/z/9x75P78bo
 
 ---
 
