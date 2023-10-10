@@ -55,7 +55,9 @@ jobs:
         working-directory: ${{runner.workspace}}/build/slides/
         shell: bash
         run: |
-          find . -name "*.pdf" -exec echo "<a href='{}'>{}</a>" \; > index.html
+          echo "<ul>" > index.html
+          find . -name "*.pdf" -exec echo "<li><a href='{}'>{}</a></li>" \; | sort > index.html
+          echo "</ul>"
 
       - name: Publish artifact with slides to GitHub Pages
         if: github.ref_name == 'publish_pdfs'
