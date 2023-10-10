@@ -1,4 +1,5 @@
 if (${CPP_COURSE_BUILD_SLIDES})
+    add_marp_slides(02_03_generic_programming_part2_concepts generic_programming_part2_concepts.md)
     add_marp_slides(02_03_generic_programming_part2_cpos generic_programming_part2_cpos.md)
 endif()
 

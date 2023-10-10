@@ -64,3 +64,7 @@ jobs:
     - name: Build
       working-directory: ${{runner.workspace}}/build
       run: cmake --build . --config ${{matrix.build_type}}
+    
+    - name: CTest
+      working-directory: ${{runner.workspace}}/build
+      run: ctest
