@@ -1,3 +1,5 @@
 {
-  "markdown.marp.themes": ["./slides-support/themes/cscs.css"]
+  "markdown.marp.themes": ["./slides-support/themes/cscs.css"],
+  "markdown.marp.enableHtml": true,
+  "clangd.path": "clangd-17"
 }
