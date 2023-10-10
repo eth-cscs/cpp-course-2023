@@ -250,7 +250,7 @@ pre {
 
 <!-- https://godbolt.org/z/34nq5K3rK -->
 
-<pre>
+<pre style="color: black;">
 In file included from /opt/compiler-explorer/gcc-13.2.0/include/c++/13.2.0/bits/stl_algobase.h:71,
                  from /opt/compiler-explorer/gcc-13.2.0/include/c++/13.2.0/vector:62,
                  from <source>:1:
@@ -345,7 +345,7 @@ pre {
 
 <!-- https://godbolt.org/z/jYPszxnhz -->
 
-<pre>
+<pre style="color: black;">
 /opt/compiler-explorer/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/bits/predefined_ops.h:69:22: error: invalid operands to binary expression ('Number' and 'Number')
    69 |       { return *__it < __val; }
       |                ~~~~~ ^ ~~~~~
