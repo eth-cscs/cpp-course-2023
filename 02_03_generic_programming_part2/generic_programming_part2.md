@@ -7,7 +7,7 @@ backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
 size: 16:9
 style: |
     div.hcenter {
-        width: 50%;
+        width: 60%;
         margin: 0 auto;
     }
     h1 {
@@ -30,13 +30,21 @@ Alberto Invernizzi, CSCS (alberto.invernizzi@cscs.ch)
 # Why do we need generic programming?
 
 ---
+<div class="hcenter">
+
 # Strong Typing
 
+<center>
+
 C++ is a strongly typed language.
+
+</center>
 
 This means that each variable is assigned a type at definition, and it cannot change over time.
 
 This gives a lot of safety, plus it allows the language(=compiler) to do assumptions and optimize the code.
+
+</div>
 
 ---
 # 💪 Strong typing vs 🦆 duck typing?
@@ -146,9 +154,11 @@ auto add(auto a, auto B) {
 
 </div>
 
-We can have template specialization for different types and combinations, but the template "placeholder" accepts anything. If at template instantiation time, it addresses a problem with the given type, it will complain with a build error 💥.
+We can have template specialization for different types and combinations, but the template "placeholder" accepts anything.
 
-Basic template generic programming sounds a bit like "duck typing", but at compile time.
+If at template instantiation time, it addresses a problem with the given type (e.g. we call a functon that this type does not have), it would complain with a build error 💥.
+
+<mark>Basic template generic programming sounds a bit like "duck typing", but at compile time.</mark>
 
 It's slightly better, but in C++ we are not satisfied with sub-optimal solutions...we want the best! 😁
 
@@ -164,8 +174,8 @@ It's slightly better, but in C++ we are not satisfied with sub-optimal solutions
 template <class T,
     std::enable_if_t<
             std::is_integral_v<T>
-            or std::is_integral_v<T>
-            , int> = 0>
+            || std::is_integral_v<T>,
+            int> = 0>
 void add(T a, T b) {
     return a + b;
 }
@@ -182,6 +192,8 @@ With **SFINAE** we have a finer control on the overload set, in practice **it en
 </div>
 
 ---
+<div class="hcenter">
+
 # SFINAE is powerful and is supported by STL
 
 Actually, SFINAE allows us to do many things in a quite rigorous way.
@@ -193,12 +205,14 @@ it can be used in many ways to enable or disable a specialization (class, functi
 - `#include <type_traits>`
 it provides some common and useful requirements and transformers for types
 
+</div>
+
 ---
 # SFINAE errors
 
 <div class="hcenter">
 
-It's nice that we can figure out at compile time of errors instead of runtime...we like it!
+It's nice that we can figure out at compile time about errors instead of facing them at runtime...we like it!
 
 It means less error in production, safer code. Nice! 🤩
 
@@ -362,6 +376,8 @@ pre {
 </pre>
 
 ---
+<div class="hcenter">
+
 # 🌹 Every rose has its torn
 
 I haven't said that SFINAE was fantastic...
@@ -375,27 +391,33 @@ Different techinques and language evolutions overcome some of this limitations i
 
 <center>
 
-# CONCEPTS
-### C++20™️
+## CONCEPTS
+#### C++20™️
 
 </center>
 
+</div>
+
 ---
+<div class="hcenter">
+
 # Concepts
 
-TODO quote from Bjarne Stroustrup
-
 + nothing dramatically new
-+ just a more readable way for SFINAE
++ it can be seen as a more readable way for SFINAE constraints
++ more readable code, and clearer error messages
 + that does not look like an incident
 
 They introduce some new language keywords and construct:
 - `requires`
 - `concept`
 
+</div>
+
 ---
 <!-- _class: lead -->
 
+### From templates to concepts in three moves!
 # Ready?
 
 ---
@@ -426,7 +448,7 @@ std::vector<float> res_v = mean(
     std::vector<float>{4,5,6});
 ```
 
-👍 no of code duplication thanks to templates!
+👍 no code duplication thanks to templates!
 
 👎 one fits all...unconstrained!
 👎 error message is not straightforward
@@ -455,10 +477,8 @@ double res_01 = mean(2.0, 3.0);
 ```
 
 ```bash
-...
 error: no type named 'type' in 'struct std::enable_if<false, void>'
  2514 |     using enable_if_t = typename enable_if<_Cond, _Tp>::type;
-      |           ^~~~~~~~~~~
 ```
 
 🍾 `Float` is now constrained!
@@ -541,7 +561,7 @@ Float mean(const Float a, const Float b) {
 </div>
 </div>
 
-**<mark>We didn't introduce any new language keyword (yet), and we already achieved a more terse and readable code, expressing exactly the same thing!</mark>**
+**<mark>We didn't introduce any new language keyword (yet), and we already achieved a more terse and readable code, in addition to better error messages, expressing exactly the same thing!</mark>**
 
 A couple of notes:
 
@@ -550,7 +570,7 @@ A couple of notes:
 ||SFINAE|Concepts|
 |-|:-:|:-:|
 |STL definitions|`#include <type_traits>`|`#include <concepts>`|
-|Names|verb (e.g. `is_floating_point`)|adjective (e.g. `floating_point`)|
+|Names|verb-like (e.g. `is_floating_point`)|adjective-like (e.g. `floating_point`)|
 </center>
 
 ---
@@ -569,7 +589,7 @@ Float mean(const Float a, const Float b) {
 }
 ```
 
-In this way we defined a named placeholder `Float`, on which we constrain to be a `std::floating_point`.
+In this way we defined a named placeholder `Float`, on which we constrain `Float` to be a `std::floating_point`.
 
 This syntax can be used directly "in-place" using `auto` for creating the placeholder
 
@@ -647,9 +667,9 @@ If we add a placeholder `FloatR`, since it cannot deduce the return type, it has
 </div>
 
 ---
-# return-type contract
-
 <div class="hcenter">
+
+# return-type contract
 
 Without constraints this is correct, since the floating point type used for `a` will be implicitly cast to `int`.
 
@@ -668,22 +688,20 @@ std::integral auto floor(const std::floating_point auto a) {
 ```
 
 ```bash
-...
 <source>:29:16: error: deduced return type does not satisfy placeholder constraints
    29 |         return a;
       |                ^
 <source>:29:16: note: constraints not satisfied
-...
-...
 <concepts>:102:24: note: the expression 'is_integral_v<_Tp> [with _Tp = float]' evaluated to 'false'
   102 |     concept integral = is_integral_v<_Tp>;
-      |                        ^~~~~~~~~~~~~~~~~~
 ```
 
 </div>
 
 ---
 <div class="hcenter">
+
+# ❤️ Concepts ❤️
 
 We didn't see much about concepts, but they already proved to be very useful! 😍
 
@@ -699,7 +717,7 @@ Just by using them like this, we can easily constrain a type (better, a placehol
 
 We've already seen them in action in various places for functions, lastly for return types, but also for arguments...
 
-Are arguments so different from variable definition!? Nope! Actually **we can use concepts also for variable definition!**
+**Are arguments so different from variable definition!?** Nope! Actually <mark>we can use concepts also for variable definition!</mark>
 
 ```cpp
 const std::integral auto res = mean(1.0f, 2.0f);
@@ -863,7 +881,7 @@ template <class T>
 concept blas_type = std::is_floating_point_v<T>;
 ```
 
-Do you recall any other way of returning a bool value, which expresses a **requirement**?
+Or...do you recall any other way of returning a bool value, which expresses a **requirement**?
 
 </div>
 
@@ -899,13 +917,14 @@ This is how they are actually defined in STL the ones that we used in our initia
 #### (Core, Comparison, Object, Callable, Iterator, Algorithm, Ranges)
 
 ---
-# Concept guidelines
-
 <div class="hcenter">
 
-+ naming
-+ big topic, not single function
-+ partial (for debugging, but also it's ok to start partial and refine later, it's hard)
+# Concept guidelines
+
++ Naming
+e.g. `is_floating_point` becomes `floating_point`
++ It should not be used for implementation requirements; it's for describing a concept.
++ Writing a good concept, from the "design" point of view, is difficult. It's good to start with a partial concept (even useful for debugging) and refine it step by step over time.
 
 </div>
 
@@ -930,7 +949,7 @@ concept Num = requires (T a, T b) {
 
 The generic library that uses `Num` concept, can be used with anything that complies with it!
 
-If someone implements `BigIntegers`?! If it respects the concept, the code should work.
+If someone implements `BigIntegers`?! If it respects the concept, the code works™️.
 
 </div>
 
@@ -1037,7 +1056,8 @@ Concept auto * const res6 = &val;
 ✅ Concept auto * const res6
 ```
 
-</center>
+*note:
+`const` applies to the **full type** (i.e. constraint helps defining the type, so it is part of it)*
 
 </div>
 
@@ -1077,10 +1097,8 @@ static_assert(Num<std::string>, "");
 </div>
 
 ---
-# Type erasure
-`std::function<>` vs `std::invocable`
+<div class="hcenter">
 
----
 # Static polymorphism
 
 With **Templates+SFINAE** we can achieve static polymorphism.
@@ -1091,13 +1109,30 @@ It has some nice implications:
 + errors are raised at compile time
 + no overhead at runtime (e.g. no `virtual` function call)
 
+**It's nothing new**, but <mark>concepts really helps in defining better and easier to maintain "interfaces"</mark>.
+
+</div>
+
+---
+<div class="hcenter">
+
+# Type erasure
+
+Specifically, in STL we have `std::function<>`, which hides the type of a functor, allowing us to store in it any function that complies with the function signature we need (i.e. return type, arguments types and their order).
+
+</div>
+
+---
+<!-- _class: lead -->
+# Recap
+
 ---
 # Recap
 
 + Why generic programming?
-+ SFINAE -> CONCEPTS Step by Step
++ (TEMPLATE $\Rightarrow$) SFINAE $\Rightarrow$ CONCEPTS : Step by Step
 + Concepts (new syntax and definition of custom concepts)
-+ Applications (type erasure, static polymorphism, ...)
++ Applications (static polymorphism, type erasure, ...)
 
 ---
 <!-- _class: lead -->
