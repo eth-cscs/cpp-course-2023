@@ -5,7 +5,6 @@ on:
     branches:
       - master
       - main
-      - publish_pdfs
   pull_request:
     branches:
       - master
@@ -51,7 +50,7 @@ jobs:
         cp ./*.pdf ./slides/
 
     - name: Generate GitHub Pages index
-      if: github.ref_name == 'publish_pdfs'
+      if: github.ref_name == 'main'
       working-directory: ${{runner.workspace}}/build/slides/
       shell: bash
       run: |
@@ -60,13 +59,14 @@ jobs:
         echo "</ul>"
 
     - name: Publish artifact with slides to GitHub Pages
-      if: github.ref_name == 'publish_pdfs'
+      if: github.ref_name == 'main'
       uses: actions/upload-pages-artifact@v2
       with:
         path: "${{runner.workspace}}/build/slides/"
   
   # Deploy job
   deploy:
+    if: github.ref_name == 'main'
     needs: slides
   
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
