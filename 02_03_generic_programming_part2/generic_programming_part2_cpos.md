@@ -34,7 +34,7 @@ When writing generic algorithms and libraries
 
 ---
 
-# Customization mechanism: interface wish-list
+# Customization mechanism: interface wish list
 
 What we would like to have: customization of interfaces (functions) which
 
@@ -57,7 +57,7 @@ What we would like to have: customization of interfaces (functions) which
 
 # Dynamic Polymorphism
 
-- Traditional way of defining interface in OOP
+- traditional way of defining interface in OOP
 - works by using `virtual` functions in c++
 
 Example:
@@ -135,14 +135,10 @@ what about this?
 
 ---
 
-# Static Polymorphism: Class Template Specialization
-
-- no additional runtime overhead, usually doesn't require allocation
-
 <div class="twocolumns">
 <div>
 
-### parametrized interface
+- `array_like` is parametrized interface
 
 ```c++
 template<typename T>
@@ -153,7 +149,34 @@ struct array_like {
 };
 ```
 
-### class template specialization
+</div>
+<div>
+
+- inherit from `array_like<T>`?
+
+```c++
+
+struct my_complex_array : array_like<std::complex> {
+    virtual unsigned long size() const override;
+    virtual bool operator==(array_like const&) const override;
+    virtual std::complex& operator[](unsigned long) override;
+}
+```
+
+- virtual call overheads persist
+- introduced many interfaces: `array_like<std::complex>`, `array_like<double>` etc
+
+</div>
+</div>
+
+---
+
+# Static Polymorphism: Class Template Specialization
+
+- no additional runtime overhead, usually doesn't require allocation
+
+<div class="twocolumns">
+<div>
 
 ```c++
 // A formatter for objects of type T.
@@ -169,15 +192,9 @@ struct formatter {
 </div>
 <div>
 
-<br></br>
 
-need to write class for your array type `A`: parametrization isn't really useful
-
-<br></br>
-
-formatter class definition for `fmt::format`: pretty empty
-
-from documentation: needs `parse` and `format` function
+- formatter class definition for `fmt::format`: pretty empty
+- from documentation: needs `parse` and `format` function
 
 </div>
 </div>
@@ -200,9 +217,9 @@ from documentation: needs `parse` and `format` function
 
 # Static Polymorphism: Customization Points
 
-- Familiar from standard library functions such as `std::swap`
+- familiar from standard library functions such as `std::swap`
 - no additional runtime overhead, usually doesn't require allocation
-- Work through ADL: Argument-dependent (name) lookup
+- work through ADL: argument-dependent (name) lookup
 - need specific incantation:
 
 <div class="twocolumns">
@@ -224,7 +241,7 @@ unqualified call to swap (note: not `std::swap(a, b)`)
 <div class="twocolumns">
 <div>
 
-make interface available through (friend member) funcion
+make interface available through (hidden) friend member funcion (technical reason: reduce set of functions that can be found by ADL)
 
 ```c++
 struct x {
@@ -242,6 +259,7 @@ struct x {
 
 - `std::swap` can also handle types without explicit `swap` interface
    - move constructible, move assignable
+   - is a default implementation
 
 </div>
 </div>
@@ -255,9 +273,142 @@ struct x {
 | prevents incorrect opt-in | partially | may still compile, but may not work correctly (concept could help) |
 | provides default implementations | yes | `std::swap(...)` works for many types out of the box |
 | simple to invoke | kinda | need to remember to make namespace available |
-| hard to incorrectly invoke | no | use `std::swap(...)` by mistake |
+| hard to incorrectly invoke | no | use `std::swap(...)` by mistake, ADL woes |
 | code shows intent | no | `std::swap` is just a function template in the standard library |
 | easy to verify for a given type | no | only with separate concept  |
+
+---
+
+# Intermezzo: What is ADL again?
+
+*You don’t have to qualify the namespace for functions if one or more argument types are defined in the namespace of the function.*
+-- Nicolai Josuttis, The C++ Standard Library: A Tutorial and Reference
+
+
+- was introduced to solve a specific problem with operators
+
+```c++
+namespace n {
+    struct A {
+        A operator++();
+    };
+    std::ostream& operator<<(std::ostream&, A const&);
+}
+
+n::A a;         // create object from namespace n
+a++;            // this is ok -> call member function on a
+std::cout << a; // how to find the right function (operator)?
+```
+- solution: whenever we see an **unqualified** call to a possibly overloaded operator look all the namespaces associated with the types of the arguments to the operator
+  - here: `global namespace`, `namespace std` and `namespace n`
+
+---
+
+<div class="twocolumns">
+<div>
+
+- ADL was extended to non-operator functions such as `swap` and `get_next`
+  - reasoning `x.foo()` should be expressable as `foo(x)` instead of `X::foo(x)`
+- when does ADL apply?
+  - name lookup (building a candidate set) for an **unqualified function call** (no `::`-qualification)
+- when does ADL not apply?
+  - not a function call: `(foo)(x)`
+  - callee **is not a function**
+
+### lookup rules
+- looks only at the **types** of the arguments (after resolving type aliases)
+- template arguments are ignored (do not add namespace of template argument types)
+
+</div>
+<div>
+
+- all arguments are considered in no particular order
+  - produces zero or more associated types and associated namespaces, via a complicated ad-hoc process
+  - for associated types: consider only the (namespace-scope) friends
+
+```c++
+namespace N {
+    struct A {
+        enum E { E0 };
+        friend void f(E);
+        static void g(E);
+    };
+}
+
+namespace M {
+    void f(int);
+    void g(int);
+    void test() {
+        N::A::E e;
+        f(e);  // ADL considers N::f (friend of N::A)
+        g(e);  // ADL does not consider N::A::g
+    }
+}
+```
+
+</div>
+</div>
+
+---
+
+- algorithm for lookup:
+  - create sets of associated namespaces and associated types for each argument
+  - merge them all together (and add our current namespace and all its parents)
+  - find declarations of the name `foo` in any of these namespaces
+  - do overload resolution for this call
+
+<div class="twocolumns">
+<div>
+
+- When does ADL go wrong?
+
+```c++
+// print library
+namespace lib1 {
+    template <typename T>
+    void print(T x) {
+        std::cout << x << std::endl;
+    }
+
+    template <typename T>
+    void print_n(T x, unsigned n) {
+        for (unsigned i = 0; i < n; ++i)
+            print(x);
+    }
+}
+```
+
+</div>
+<div>
+
+
+```c++
+// other library
+namespace lib2 {
+    struct unicorn { /* unicorn stuff goes here */ };
+
+    std::ostream& operator<<(std::ostream& os, unicorn x) { return os; }
+
+    // Don't ever call this!  It just crashes!  I don't know why I wrote it!
+    void print(unicorn) { *(int*)0 = 42; }
+}
+
+int main() {
+    lib2::unicorn x;
+    lib1::print_n(x, 10); // boom
+}
+```
+
+- form point of view of `lib1`: we have **no way of knowing** what function will be called by `print_n` *a priori*
+
+</div>
+</div>
+
+
+<h4></h4>
+<sub><sub><sub><ol>
+    <li id="footnote-1">https://stackoverflow.com/questions/2958648/what-are-the-pitfalls-of-adl</li>
+</ol></sub></sub></sub>
 
 ---
 
@@ -298,7 +449,7 @@ ADL may break this code!
 
 ---
 
-- Switch off ADL by using objects
+- switch off ADL by using objects (remember ADL does not apply for non-functions)
 
 <div class="twocolumns">
 <div>
@@ -379,7 +530,7 @@ std2::swap(a, b);
 | code shows intent | no | hard to see from objects |
 | easy to verify for a given type | partially | with separate concept |
 
-Other issues
+other issues
 - ususally requires more code
 - customization point objects reserve their identifier globally (two libraries with same CPO name may clash)
 
@@ -471,7 +622,6 @@ std2::swap(a, b);
 </div>
 </div>
 
-- but ADL is switched off: `swap(a, b)` without qualification / namespace use won't work
 - globally reserve a single name: `tag_invoke`
 
 ---
@@ -487,7 +637,7 @@ std2::swap(a, b);
 | code shows intent | partially | recognize `tag_invoke` friend function |
 | easy to verify for a given type | partially | with separate concept |
 
-Other issues
+other issues
 - ususally requires similar amount of code than CPOs
 - not yet standard (`tag_invoke` requires some machinery behind the scenes)
 
@@ -495,13 +645,13 @@ Other issues
 
 # Conclusions
 
-- Many nuances to consider
+- many nuances to consider
 - ADL can lead to subtle errors
-- Lack of language feature requires elaborate library (workarounds)
+- lack of language feature requires elaborate library (workarounds)
 - `tag_invoke` is best option for now
   - if we care about a few free functions
-- If we need to create a whole type for an interface
-  - other options (inherit mixins with CRTP, policies etc)
+- if we need to create a whole type for an interface
+  - other options (inherit mixins with CRTP, class template specializations etc)
 
 ---
 
@@ -511,7 +661,6 @@ Other issues
 - https://brevzin.github.io/c++/2020/12/19/cpo-niebloid/
 - https://brevzin.github.io/c++/2020/12/01/tag-invoke/
 - https://quuxplusone.github.io/blog/2019/08/02/the-tough-guide-to-cpp-acronyms/#cpo
+- https://quuxplusone.github.io/blog/2019/04/26/what-is-adl/
 - https://www.fi.muni.cz/pv264/files/pv264_s06b_niebloids.pdf
-
-
 

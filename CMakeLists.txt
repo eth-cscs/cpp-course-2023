@@ -19,6 +19,8 @@ option(CPP_COURSE_BUILD_SLIDES "Weather to build slides." ON)
 option(CPP_COURSE_BUILD_SLIDES_PDF "Weather to build slides." ON)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (${CPP_COURSE_BUILD_SLIDES})
     include(cmake/Marp.cmake)
@@ -56,5 +58,6 @@ add_subdirectory(02_05_example_concept_based_design)
 # Day 3
 add_subdirectory(03_01_data_oriented_design)
 add_subdirectory(03_02_data_access_algorithms_ranges)
+add_subdirectory(03_02b_mdspan)
 add_subdirectory(03_03_examples_something_something)
 add_subdirectory(03_04_future)
