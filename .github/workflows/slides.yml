@@ -5,12 +5,10 @@ on:
     branches:
       - master
       - main
-      - publish_pdfs
   pull_request:
     branches:
       - master
       - main
-      - publish_pdfs
 
 jobs:
   slides:
@@ -58,7 +56,7 @@ jobs:
         path: ${{runner.workspace}}/build/slides
 
   deploy:
-    if: github.ref_name == 'publish_pdfs' # TODO change this to `main` before merging
+    if: github.ref_name == 'main'
     needs: slides
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
