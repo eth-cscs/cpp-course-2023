@@ -80,10 +80,10 @@ jobs:
     - name: Generate GitHub Pages index
       shell: bash
       run: |
-        echo "<h1>Slides from the CSCS Advanced C++ Course 2023</h1>" > index.html
-        echo "<ul>" > index.html
-        find . -name "*.pdf" -exec echo "<li><a href='{}'>{}</a></li>" \; | sort > index.html
-        echo "</ul>" > index.html
+        echo "<h1>Slides from the CSCS Advanced C++ Course 2023</h1>" >> index.html
+        echo "<ul>" >> index.html
+        find . -name "*.pdf" -exec echo "<li><a href='{}'>{}</a></li>" \; | sort >> index.html
+        echo "</ul>" >> index.html
 
     - name: Publish artifact with slides to GitHub Pages
       uses: actions/upload-pages-artifact@v2
