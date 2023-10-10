@@ -1202,8 +1202,8 @@ But, before seeing the handle, let's understand a bit better this question about
 
 Even if they are not 100% correct, these definitions are very good approximations.
 
-+ `lvalue`s can stay **<mark>"tipically"</mark>** on the **left** side of `=`, and `rvalues` can **<mark>"tipically"</mark>** stay on the **right**.
-+ `lvalue` is **<mark>"tipically"</mark>** something with an **identity**, and `rvalue` has **<mark>"tipically"</mark>** **no identity**
++ `lvalue`s can stay **<mark>"typically"</mark>** on the **left** side of `=`, and `rvalues` can **<mark>"typically"</mark>** stay on the **right**.
++ `lvalue` is **<mark>"typically"</mark>** something with an **identity**, and `rvalue` has **<mark>"typically"</mark>** **no identity**
 
 For them, the language offers two different kind of references that binds to them.
 
