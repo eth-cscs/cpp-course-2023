@@ -334,11 +334,11 @@ std::optional<T> safeish_div(T x, T y) noexcept {
 
 ```c++
 std::vector<int> v1;
-int x1 = v1.pop_back(); // Undefined behaviour
+int x1 = v1.back(); // Undefined behaviour
 
 myvector<int> v2;
 // Use of x2 requires explicit checking that it's valid
-std::optional<int> x2 = v2.pop_back();
+std::optional<int> x2 = v2.back();
 ```
 
 ---
