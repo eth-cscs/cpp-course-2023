@@ -2,6 +2,7 @@ if (${CPP_COURSE_BUILD_SLIDES})
     add_marp_slides(02_01_functional_generic_utilities functional_generic_utilities.md)
 endif()
 
+if (${CPP_COURSE_BUILD_CODE})
 add_executable(02_01_apply
     code/apply.cpp
 )
@@ -34,3 +35,4 @@ add_executable(02_00_tuple_storage
 add_executable(02_01_tuple_storage_apply
     code/tuple_storage_apply.cpp
 )
+endif()

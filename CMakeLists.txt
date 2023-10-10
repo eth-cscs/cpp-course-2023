@@ -15,6 +15,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
     ${PROJECT_BINARY_DIR}/lib CACHE PATH "Single Directory for all static libraries."
 )
 
+option(CPP_COURSE_BUILD_CODE "Weather to build code." ON)
 option(CPP_COURSE_BUILD_SLIDES "Weather to build slides." ON)
 option(CPP_COURSE_BUILD_SLIDES_PDF "Weather to build slides." ON)
 

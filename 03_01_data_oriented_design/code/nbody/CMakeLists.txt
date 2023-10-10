@@ -1,3 +1,4 @@
+if (${CPP_COURSE_BUILD_CODE})
 add_executable(03_01_nbody)
 target_sources(03_01_nbody
     PRIVATE
@@ -11,3 +12,4 @@ target_sources(03_01_nbody
 
 target_compile_options(03_01_nbody PRIVATE ${CPP_COURSE_MATH_NO_ERRNO_OPTION})
 target_compile_options(03_01_nbody PRIVATE ${CPP_COURSE_AVX_OPTION})
+endif()
