@@ -105,7 +105,7 @@ class extents;
 - `IndexType` is a signed or unsigned integer type
 - each element of `Extents` is either
   - `std::dynamic_extent` or 
-  - representable as value of `IndexType` (compile-time extents)
+  - number representable in `IndexType` (compile-time extents)
 
 ---
 
@@ -120,7 +120,6 @@ static_assert(decltype(ext1)::rank_dynamic() == 2);
 static_assert(decltype(ext1)::static_extent(0) == std::dynamic_extent);
 assert(ext1.extent(0) == 42);
 static_assert(decltype(ext1)::static_extent(1) == 3);
-static_assert(std::extent_v<decltype(ext1), 2> == 3);
 ```
 
 ```c++
@@ -152,7 +151,7 @@ auto ext4 = std::dextents<int, 3>{ 42, 43, 44 };
   - `std::layout_stride` generalization for arbitrary strides
 - custom layout:
   - skip elements (e.g. tiling)
-  - multiple indices to one same element
+  - multiple indices to the same element
 </div>
 <div>
 <img src="Row_and_column_major_order.png" style="width: 35%" align="left"/>
@@ -163,16 +162,15 @@ https://commons.wikimedia.org/wiki/User:Cmglee, CC BY-SA 4.0
 
 
 ```c++
-using strided_md_span = std::mdspan<float, std::dextents<std::size_t, 3>, std::layout_stride>;
-auto s = strided_md_span(some_ptr, { std::dextents<std::size_t, 3>(2, 5, 10), std::array<std::size_t, 3>{ 5, 1, 10 } });
+auto s = std::mdspan(some_ptr, std::layout_stride::mapping(std::extents(2, 5, 10), std::array{ 5, 1, 10 }));
 
-assert((some_ptr[2 + 5 + 30] == s[1, 2, 3]));
+assert((some_ptr[1*5 + 2*1 + 3*10] == s[1, 2, 3]));
 ```
 
 
 ---
 
-# Layout example*
+# Layout example: matrix vector multiply*
 
 ```c++
 using layout = /* see-below */;
@@ -260,18 +258,15 @@ void test_host_device_protector() {
 
 ---
 
-# submdspan
-
-- not part of C++23, but in working draft for C++26, see https://wg21.link/p2630 and https://eel.is/c++draft/mdspan.submdspan
-
-**TODO**
----
-
 # Status of multi-dimensional C++
 
 ✅ accessing multi-dimensional data (mdspan)
 ❌ allocating multi-dimensional data
 ❌ iterating multi-dimensional data / multi-dimensional algorithms (see \*)
+
+In C++26 we will get:
+- very likely: `std::submdspan`
+- likely: `std::mdarray`
 
 \* [Multidimensional C++, Bryce A. Lelbach at CppNorth 2022](https://youtu.be/aFCLmQEkPUw?si=4LI8eo5ZvBLEjDxq) 
 
@@ -287,14 +282,13 @@ struct my_mdarray {
     std::array<int, N> sizes_;
 
     my_mdarray(std::convertible_to<int> auto... sizes) : data_((sizes * ...)), sizes_{ sizes... } {
-        std::iota(data_.begin(), data_.end(), 0);
-    }
-
-    operator std::mdspan<T, std::dextents<int, N>>() {
-        return { data_.data(), std::dextents<int, N>{ sizes_ } };
     }
 
     std::mdspan<T, std::dextents<int, N>> mdspan() {
+        return { data_.data(), std::dextents<int, N>{ sizes_ } };
+    }
+
+    operator std::mdspan<T, std::dextents<int, N>>() {
         return { data_.data(), std::dextents<int, N>{ sizes_ } };
     }
 };
