@@ -300,7 +300,7 @@ my_fun(values); // Work fine, uses caller's memory allocator
 - Example: `std::sort`, `std::find`, `std::binary_search`
 - The standard library has generic implementations of many common algorithms
 - The algorithms work on *ranges* specified by *iterators*:
-    - You can use your container's `being()` and `end()` to supply the range
+    - You can use your container's `begin()` and `end()` to supply the range
     - Algorithms thus run on any suitable container
 - Practical use:
     - Many real-world problems can be reduced to a common algorithm
