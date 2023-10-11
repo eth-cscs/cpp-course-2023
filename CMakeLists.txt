@@ -52,7 +52,6 @@ add_subdirectory(01_04_generic_programming_1_templates)
 # Day 2
 add_subdirectory(02_01_functional_generic_utilities)
 add_subdirectory(02_03_generic_programming_part2)
-add_subdirectory(02_04_exercises)
 add_subdirectory(02_05_example_concept_based_design)
 
 # Day 3
