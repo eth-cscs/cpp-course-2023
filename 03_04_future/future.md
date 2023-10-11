@@ -233,13 +233,35 @@ else
 
 # `std::simd`
 
-<div class="twocolumns">
-<div>
-
 - SIMD: single instruction multiple data
 - Modern processors: wide registers with machine instructions acting on the multiple data
 - SSE, SSE2, AVX, AVX2, AVX512, SVE, SVE2
-- Many libraries:
+- Auto-vectorization sometimes not good enough
+- Requires hardware-specific code, usually compiler intrinsics
+
+```c++
+// AVX: Compute 2.0^2
+// Arbor's implementation, https://github.com/arbor-sim/arbor/blob/master/arbor/include/arbor/simd/avx.hpp
+__m256d exp2int(__m128i n) {
+    n = _mm_slli_epi32(n, 20);
+    n = _mm_add_epi32(n, _mm_set1_epi32(1023<<20));
+
+    auto nl = _mm_shuffle_epi32(n, 0x50);
+    auto nh = _mm_shuffle_epi32(n, 0xfa);
+    _mm256_insertf128_si256(_mm256_castsi128_si256(nl), nh, 1);
+
+    return _mm256_castps_pd(
+        _mm256_blend_ps(_mm256_set1_ps(0),
+        _mm256_castsi256_ps(nhnl),0xaa));
+}
+```
+
+---
+
+<div class="twocolumns">
+<div>
+
+- Many libraries for abstracting hardware specifics
   - vir::stdx::simd
   - Agner Fog’s Vector Types
   - E.V.E.
@@ -264,6 +286,7 @@ else
 
 # `std::simd`
 
+- in `std::experimental` (gcc: since v11) for now
 - `std::simd<T, Abi>`
   - behaves mostly like object of type`T` but operates on multiple values (element-wise)
   - Abi (template-template parameter) determines vector width (`size`) and ABI (i.e. how parameters are passed to functions)
@@ -334,8 +357,7 @@ You often need an “epilogue”
 - efforts to integrate simd with parallel algorithms (P0350)
 
 ```c++
-std::transform(std::execution::simd,
-    data.begin(), data.end(), data.begin(),
+std::transform(std::execution::simd, data.begin(), data.end(), data.begin(),
     [](auto x) {
         return std::sin(x);
     });

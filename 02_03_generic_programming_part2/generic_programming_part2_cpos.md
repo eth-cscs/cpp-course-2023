@@ -8,13 +8,14 @@ backgroundImage: url('../slides-support/common/4k-slide-bg-white.png')
 size: 16:9
 ---
 
-# **Generic programming tools: CPOs**
+# **Advanced C++ Course 2023**
 ![bg cover](../slides-support/common/title-bg3.png)
 <!-- _paginate: skip  -->
 <!-- _class: titlecover -->
 <!-- _footer: "" -->
 
-#### Fabian Bösch
+## **Generic programming tools: CPOs**
+#### CSCS
 
 ---
 
