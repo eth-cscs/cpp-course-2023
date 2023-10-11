@@ -581,6 +581,20 @@ const auto series =
 
 ---
 
+# Remarks
+
+- The C++ standard library is focused on data structures and algorithms
+- Both data structures and algorithms are generic and composable
+- Many real-world problems can be modeled in terms of these data structures and algorithms
+- Use the standard library as much as you can
+    - Saves you development time
+    - Improves code quality (e.g. fewer bugs, fewer lines)
+    - May improve performance: `std::stable_sort` likely outperforms your `half_assed_sort`™
+- Expect to outperform the standard library for specific cases
+    - But only after a lot of investment from you
+
+---
+
 # References
 
 - https://en.cppreference.com/w/cpp/container

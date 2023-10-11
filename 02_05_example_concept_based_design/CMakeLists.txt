@@ -10,3 +10,5 @@ add_test(NAME 02_05_sol1_filter COMMAND 02_05_sol1_filter)
 
 add_executable(02_05_sol2_to_vector code/sol2_to_vector.cpp)
 add_test(NAME 02_05_sol2_to_vector COMMAND 02_05_sol2_to_vector)
+
+add_executable(02_05_sol4_cursor_algorithm_concept code/sol4_cursor_algorithm_concept.cpp)

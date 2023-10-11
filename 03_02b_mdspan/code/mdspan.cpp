@@ -16,6 +16,7 @@ void extents_snippets() {
     static_assert(decltype(ext1)::rank_dynamic() == 2);
     static_assert(decltype(ext1)::static_extent(0) == std::dynamic_extent);
     assert(ext1.extent(0) == 42);
+    assert(ext1.extent(2) == 43);
     static_assert(decltype(ext1)::static_extent(1) == 3);
 
     auto ext2 = std::extents<std::uint8_t, 3, 4>{};
@@ -25,6 +26,7 @@ void extents_snippets() {
     auto ext3 = std::extents{ 42, 44 };
     static_assert(decltype(ext3)::static_extent(42) == std::dynamic_extent);
     assert(ext3.extent(0) == 42);
+    static_assert(std::is_same_v<std::size_t, decltype(ext3)::index_type>);
 
     auto ext4 = std::dextents<int, 3>{ 42, 43, 44 };
 }

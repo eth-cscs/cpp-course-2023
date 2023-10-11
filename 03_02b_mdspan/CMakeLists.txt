@@ -14,6 +14,8 @@ add_executable(03_02b_mdspan code/mdspan.cpp)
 target_link_libraries(03_02b_mdspan mdspan)
 target_compile_features(03_02b_mdspan PRIVATE cxx_std_23)
 
+add_test(NAME 03_02b_mdspan COMMAND 03_02b_mdspan)
+
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/
         DESTINATION ${CMAKE_BINARY_DIR}
         FILES_MATCHING PATTERN "*.png")

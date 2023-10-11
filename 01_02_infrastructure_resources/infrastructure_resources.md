@@ -357,8 +357,8 @@ cmake -B [build directory] -S . \
 
 * The [isocpp.org](https://isocpp.org) site is main entry point for the C++ standard and related things (news, articles, blogs,...)
     + The [C++ Core Guidelines](http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) are a set of tried-and-true guidelines, rules, and best practices about coding in C++
-* [cplusplus.com](https://cplusplus.com) has tutorials articles, and a good
-    + [C++ reference](https://cplusplus.com/reference/) that covers the stl library
+* [C++ reference](https://cppreference.com) covers the language and standard library
+* [cplusplus.com](https://cplusplus.com) has tutorials articles
 * [hackingcpp.com](https://hackingcpp.com) a good collection of various C++ learning resources
     + with an excellent [Tools Ecosystem Overview](https://hackingcpp.com/cpp/tools/ecosystem.html).
 
