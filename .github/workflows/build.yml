@@ -55,6 +55,11 @@ jobs:
       uses: KyleMayes/install-llvm-action@v1
       with:
         version: "16.0"
+    - name: Install LLVM and Clang
+      if: ${{ matrix.os == 'macos-latest' }}
+      uses: KyleMayes/install-llvm-action@v1
+      with:
+        version: "15.0"
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
