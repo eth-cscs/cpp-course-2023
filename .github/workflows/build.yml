@@ -51,7 +51,7 @@ jobs:
     - uses: seanmiddleditch/gha-setup-ninja@v3
     - uses: seanmiddleditch/gha-setup-vsdevenv@master
     - name: Install LLVM and Clang
-      if: ${{ matrix.os != macos-latest }}
+      if: ${{ matrix.os != 'macos-latest' }}
       uses: KyleMayes/install-llvm-action@v1
       with:
         version: "16.0"
