@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest, macos-13]
         c_compiler: [gcc, clang, cl]
         build_type: [Debug, Release]
         cxx_standard: ["20"]
