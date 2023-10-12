@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         c_compiler: [gcc, clang, cl]
         build_type: [Debug, Release]
         cxx_standard: ["20"]
@@ -36,6 +36,10 @@ jobs:
           - os: windows-latest
             c_compiler: clang
           - os: ubuntu-latest
+            c_compiler: cl
+          - os: macos-latest
+            c_compiler: gcc
+          - os: macos-latest
             c_compiler: cl
 
     name: ${{ matrix.c_compiler }} - ${{ matrix.build_type }} - ${{ matrix.os }} - c++${{ matrix.cxx_standard }}
