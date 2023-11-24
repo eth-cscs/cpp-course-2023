@@ -59,18 +59,18 @@ task<int> compute(task<int> input) {
 
 ---
 
-# Implementing `task<T>`
+# Coroutines in C++
 
 ### How to use C++ coroutines?
 
 1. Decide you need coroutines
-2. Sit down and code you own coroutine library
+2. Sit down and code your own coroutine library
 3. Write thousands of lines of code
 4. Debug concurrency errors
 5. ???
 6. Profit
 
-### Reason:
+### Why so complicated?
 
 - You can't simply use coroutines out of the box
 - Downside: `task<T>` and the like have to be implemented by you
@@ -78,7 +78,7 @@ task<int> compute(task<int> input) {
 
 ---
 
-# Defining a coroutine
+# Compiler support for coroutines
 
 <div class="twocolumns">
 <div>
@@ -96,6 +96,7 @@ task<int> t = my_first_coro();
 ```
 
 - This is how your code looks like
+- You think about this when using a coroutine library
 
 </div>
 <div>
@@ -123,11 +124,10 @@ final_suspend:
 auto promise = new typename task<int>::promise_type;
 task<int> t = promise->get_return_object();
 my_first_coro(*promise);
-
 ```
 
 - This is how the compiler interacts with your code
-- You only care about this when implementing `task<T>`
+- You think about this when implementing `task<T>`
 
 </div>
 </div>
@@ -570,21 +570,21 @@ int main() {
 # Going async
 
 - The issue: all our coroutines execute synchronously
-- We have to eventually combine them with other event sources:
+- We need to change the implementation of `await_ready` and `await_suspend`
+- Combining coroutines with other event sources:
     - We can offload computation of a coroutine to another thread and `co_await` or `get()` it elsewhere
     - We can make a coroutine resume only once an I/O operation is finished
     - We can make a coroutine resume on other operations such as DB queries, HTTP requests, etc.
-- We just have to be smarter when implementing `await_ready` and `await_suspend`
 - **MOST IMPORTANT POINT**: 
     - This only changes the implementation of `task<T>` and similar primitives
     - The syntax to use them stays the exact same
         - Which is currently the same syntax as regular functions
-        - Therefore our async code will look like blocking code (==nice)
-    - This is the primary purpose of coroutines
+        - Thus our async code will look like the usual sync code (not bad!)
+    - This is the main motivation behind coroutines
 
 ---
 
-# The unchanged syntax
+# Syntax of async code
 
 <div class="twocolumns">
 <div>
@@ -640,7 +640,7 @@ task<bowl&> make_dough(bowl& b) {
 
 ---
 
-# Coroutine primitives you can build
+# Creating a coroutine library
 
 We have seen:
 - `task<T>`
@@ -667,7 +667,7 @@ But there is also:
 class socket {
     struct awaitable {
         bool await_ready() {
-            return pool(m_fd, 0);
+            return poll(m_fd, 0);
         }
         void await_suspend(std::coroutine_handle<> handle) {
             network_scheduler::enqueue(m_fd, handle);
@@ -799,9 +799,12 @@ task<void> update_frame() {
 </div>
 </div>
 
-Comparison:
-- Number of threads my PC can finish in a second: ...
-- Number of coroutines my PC can finish in a second: ...
+- Number of threads my PC can finish in a second:
+    - Linux: 54k/s
+    - Windows: 53k/s
+- Number of coroutines my PC can finish in a second:
+    - Linux: 163M/s
+    - Windows: 27M/s
 
 ---
 
