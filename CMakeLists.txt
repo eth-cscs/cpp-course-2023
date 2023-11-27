@@ -59,3 +59,6 @@ add_subdirectory(03_01_data_oriented_design)
 add_subdirectory(03_02_data_access_algorithms_ranges)
 add_subdirectory(03_02b_mdspan)
 add_subdirectory(03_04_future)
+
+# Extra
+add_subdirectory(0x_0x_coroutines)
